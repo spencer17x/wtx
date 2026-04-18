@@ -1,0 +1,32 @@
+{
+  "name": "wtx",
+  "version": "0.0.0-development",
+  "description": "Enhance git worktree creation with initialization and environment setup",
+  "license": "MIT",
+  "homepage": "https://github.com/spencer17x/wtx",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/spencer17x/wtx.git"
+  },
+  "bugs": {
+    "url": "https://github.com/spencer17x/wtx/issues"
+  },
+  "bin": {
+    "wtx": "npm/bin/wtx.js"
+  },
+  "files": [
+    "npm",
+    "scripts",
+    "packaging",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test:npm": "node --test npm/*.test.js scripts/*.test.js",
+    "test": "go test ./... && npm run test:npm"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
