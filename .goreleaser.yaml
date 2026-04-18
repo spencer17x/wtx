@@ -1,0 +1,36 @@
+version: 2
+
+project_name: wtx
+
+before:
+  hooks:
+    - go test ./...
+
+builds:
+  - id: wtx
+    main: ./cmd/wtx
+    binary: wtx
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    name_template: >-
+      {{ .ProjectName }}_{{ title .Os }}_{{ if eq .Arch "amd64" }}x86_64{{ else }}{{ .Arch }}{{ end }}
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  github:
+    owner: spencer17x
+    name: wtx
