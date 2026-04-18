@@ -12,30 +12,65 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v5
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - uses: actions/setup-node@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
         with:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
+      - name: Validate tag and derive package version
+        id: version
+        run: |
+          VERSION="$(node -e "const { getVersionFromTag } = require('./npm/platform'); process.stdout.write(getVersionFromTag(process.env.RELEASE_TAG));")"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
       - name: Derive package version
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          node -e "const fs=require('fs');const pkg=require('./package.json');pkg.version='${VERSION}';fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');"
-      - run: npm test
-      - run: npm run release:publish
+          node -e "const fs=require('fs');const pkg=require('./package.json');pkg.version=process.env.VERSION;fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');"
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+      - name: Run tests
+        run: npm test
+      - name: Check for existing GitHub release
+        id: release_exists
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          if curl -fsSL \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPOSITORY}/releases/tags/${RELEASE_TAG}" >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            status=$?
+            if [ "$status" -eq 22 ]; then
+              echo "exists=false" >> "$GITHUB_OUTPUT"
+            else
+              exit "$status"
+            fi
+          fi
+      - name: Publish GitHub release
+        if: steps.release_exists.outputs.exists != 'true'
+        run: npm run release:publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Update Homebrew tap
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          URL="https://github.com/spencer17x/wtx/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz"
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${GITHUB_REF_NAME}"
+          URL="https://github.com/spencer17x/wtx/archive/refs/tags/${TAG}.tar.gz"
           SHA256="$(curl -fsSL "$URL" | shasum -a 256 | awk '{print $1}')"
           git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/spencer17x/homebrew-wtx.git" /tmp/homebrew-wtx
           node scripts/update-homebrew-formula.js \
@@ -50,6 +85,7 @@ jobs:
           git add Formula/wtx.rb
           git commit -m "wtx ${VERSION}"
           git push
-      - run: npm publish
+      - name: Publish npm package
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
