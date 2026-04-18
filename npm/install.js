@@ -17,16 +17,56 @@ function shouldSkipInstall(version) {
   return version === "0.0.0-development";
 }
 
-function downloadFile(url, destination, { getImpl = https.get, redirectCount = 0 } = {}) {
+function cleanupDestination(destination, file, rmImpl) {
+  return new Promise((resolve) => {
+    const finalize = () => rmImpl(destination, { force: true }, () => resolve());
+    if (file && typeof file.close === "function") {
+      file.close(finalize);
+      return;
+    }
+    finalize();
+  });
+}
+
+function downloadFile(
+  url,
+  destination,
+  {
+    getImpl = https.get,
+    createWriteStreamImpl = fs.createWriteStream,
+    rmImpl = fs.rm,
+    redirectCount = 0,
+  } = {},
+) {
   return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(destination);
+    const file = createWriteStreamImpl(destination);
+    let settled = false;
+
+    const fail = (error) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanupDestination(destination, file, rmImpl).then(() => reject(error));
+    };
+
+    const succeed = () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (file && typeof file.close === "function") {
+        file.close(() => resolve());
+        return;
+      }
+      resolve();
+    };
 
     const request = getImpl(url, (response) => {
       const isRedirect = response.statusCode >= 300 && response.statusCode < 400;
       if (isRedirect && response.headers.location) {
-        file.close(() => {
-          fs.rm(destination, { force: true }, () => {});
-        });
+        settled = true;
+        cleanupDestination(destination, file, rmImpl);
         if (redirectCount >= 5) {
           reject(new Error(`Too many redirects while downloading ${url}`));
           return;
@@ -41,28 +81,43 @@ function downloadFile(url, destination, { getImpl = https.get, redirectCount = 0
       }
 
       if (response.statusCode !== 200) {
-        file.close(() => {
-          fs.rm(destination, { force: true }, () => {});
-        });
-        reject(new Error(`Failed to download ${url}: ${response.statusCode}`));
+        fail(new Error(`Failed to download ${url}: ${response.statusCode}`));
         return;
       }
 
+      response.on("error", fail);
+      if (file && typeof file.on === "function") {
+        file.on("error", fail);
+      }
+
       response.pipe(file);
-      file.on("finish", () => {
-        file.close(resolve);
-      });
+      if (file && typeof file.on === "function") {
+        file.on("finish", succeed);
+      } else {
+        succeed();
+      }
     });
 
     if (request && typeof request.on === "function") {
-      request.on("error", (error) => {
-        file.close(() => {
-          fs.rm(destination, { force: true }, () => {});
-        });
-        reject(error);
-      });
+      request.on("error", fail);
     }
   });
+}
+
+function formatExtractionError(error) {
+  if (error && error.code === "ENOENT") {
+    return new Error("Unable to extract wtx archive: tar is not available on PATH");
+  }
+
+  return new Error(`Unable to extract wtx archive: ${error && error.message ? error.message : "tar failed"}`);
+}
+
+function extractArchive(archivePath, outputDir, { execFileSyncImpl = execFileSync } = {}) {
+  try {
+    execFileSyncImpl("tar", ["-xzf", archivePath, "-C", outputDir]);
+  } catch (error) {
+    throw formatExtractionError(error);
+  }
 }
 
 async function installBinary({
@@ -73,6 +128,7 @@ async function installBinary({
   platform = process.platform,
   arch = process.arch,
   downloadFileImpl = downloadFile,
+  execFileSyncImpl = execFileSync,
 } = {}) {
   if (shouldSkipInstall(version)) {
     return { skipped: true };
@@ -91,10 +147,13 @@ async function installBinary({
     archive: asset.archive,
   });
 
-  await downloadFileImpl(url, archivePath);
-  execFileSync("tar", ["-xzf", archivePath, "-C", path.dirname(binaryPath)]);
-  fs.chmodSync(binaryPath, 0o755);
-  fs.rmSync(archivePath, { force: true });
+  try {
+    await downloadFileImpl(url, archivePath);
+    extractArchive(archivePath, path.dirname(binaryPath), { execFileSyncImpl });
+    fs.chmodSync(binaryPath, 0o755);
+  } finally {
+    fs.rmSync(archivePath, { force: true });
+  }
 
   return { skipped: false };
 }
@@ -105,6 +164,8 @@ module.exports = {
   resolveBinaryPath,
   shouldSkipInstall,
   installBinary,
+  extractArchive,
+  formatExtractionError,
 };
 
 if (require.main === module) {
