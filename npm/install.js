@@ -13,11 +13,33 @@ function resolveBinaryPath(packageRoot, binaryName) {
   return path.join(packageRoot, "npm", "bin", binaryName);
 }
 
-function downloadFile(url, destination) {
+function shouldSkipInstall(version) {
+  return version === "0.0.0-development";
+}
+
+function downloadFile(url, destination, { getImpl = https.get, redirectCount = 0 } = {}) {
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(destination);
 
-    https.get(url, (response) => {
+    const request = getImpl(url, (response) => {
+      const isRedirect = response.statusCode >= 300 && response.statusCode < 400;
+      if (isRedirect && response.headers.location) {
+        file.close(() => {
+          fs.rm(destination, { force: true }, () => {});
+        });
+        if (redirectCount >= 5) {
+          reject(new Error(`Too many redirects while downloading ${url}`));
+          return;
+        }
+
+        downloadFile(
+          new URL(response.headers.location, url).toString(),
+          destination,
+          { getImpl, redirectCount: redirectCount + 1 },
+        ).then(resolve, reject);
+        return;
+      }
+
       if (response.statusCode !== 200) {
         file.close(() => {
           fs.rm(destination, { force: true }, () => {});
@@ -30,12 +52,16 @@ function downloadFile(url, destination) {
       file.on("finish", () => {
         file.close(resolve);
       });
-    }).on("error", (error) => {
-      file.close(() => {
-        fs.rm(destination, { force: true }, () => {});
-      });
-      reject(error);
     });
+
+    if (request && typeof request.on === "function") {
+      request.on("error", (error) => {
+        file.close(() => {
+          fs.rm(destination, { force: true }, () => {});
+        });
+        reject(error);
+      });
+    }
   });
 }
 
@@ -46,7 +72,12 @@ async function installBinary({
   repo = "wtx",
   platform = process.platform,
   arch = process.arch,
+  downloadFileImpl = downloadFile,
 } = {}) {
+  if (shouldSkipInstall(version)) {
+    return { skipped: true };
+  }
+
   const asset = getAssetInfo(platform, arch);
   const archivePath = path.join(packageRoot, asset.archive);
   const binaryPath = resolveBinaryPath(packageRoot, asset.binaryName);
@@ -60,20 +91,29 @@ async function installBinary({
     archive: asset.archive,
   });
 
-  await downloadFile(url, archivePath);
+  await downloadFileImpl(url, archivePath);
   execFileSync("tar", ["-xzf", archivePath, "-C", path.dirname(binaryPath)]);
   fs.chmodSync(binaryPath, 0o755);
   fs.rmSync(archivePath, { force: true });
+
+  return { skipped: false };
 }
 
 module.exports = {
   buildReleaseAssetUrl,
+  downloadFile,
   resolveBinaryPath,
+  shouldSkipInstall,
   installBinary,
 };
 
 if (require.main === module) {
   const version = require("../package.json").version;
+  if (shouldSkipInstall(version)) {
+    console.log(`Skipping npm install for development version ${version}`);
+    process.exit(0);
+  }
+
   installBinary({ version }).catch((error) => {
     console.error(error.message);
     process.exit(1);

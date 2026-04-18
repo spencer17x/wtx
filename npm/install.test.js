@@ -1,9 +1,16 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const { Readable } = require("node:stream");
 
 const {
   buildReleaseAssetUrl,
+  downloadFile,
   resolveBinaryPath,
+  installBinary,
+  shouldSkipInstall,
 } = require("./install");
 
 test("builds the expected GitHub release asset URL", () => {
@@ -23,4 +30,56 @@ test("resolves the local binary path inside the npm package", () => {
     resolveBinaryPath("/tmp/pkg", "wtx"),
     /\/tmp\/pkg\/npm\/bin\/wtx$/,
   );
+});
+
+test("follows redirects when downloading release assets", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wtx-install-"));
+  const destination = path.join(tempDir, "asset.tgz");
+  const urls = [];
+
+  const getImpl = (url, callback) => {
+    urls.push(url);
+
+    if (urls.length === 1) {
+      const response = new Readable({ read() {} });
+      response.statusCode = 302;
+      response.headers = { location: "/download/real-asset.tgz" };
+      process.nextTick(() => callback(response));
+      return { on() {} };
+    }
+
+    const response = Readable.from(["payload"]);
+    response.statusCode = 200;
+    response.headers = {};
+    process.nextTick(() => callback(response));
+    return { on() {} };
+  };
+
+  await downloadFile(
+    "https://github.com/spencer17x/wtx/releases/download/v0.1.0/wtx_Darwin_arm64.tar.gz",
+    destination,
+    { getImpl },
+  );
+
+  assert.deepEqual(urls, [
+    "https://github.com/spencer17x/wtx/releases/download/v0.1.0/wtx_Darwin_arm64.tar.gz",
+    "https://github.com/download/real-asset.tgz",
+  ]);
+  assert.equal(fs.readFileSync(destination, "utf8"), "payload");
+});
+
+test("skips installing in development checkouts", async () => {
+  let attempted = false;
+
+  const result = await installBinary({
+    version: "0.0.0-development",
+    downloadFileImpl: async () => {
+      attempted = true;
+      throw new Error("should not be called");
+    },
+  });
+
+  assert.equal(result.skipped, true);
+  assert.equal(attempted, false);
+  assert.equal(shouldSkipInstall("0.0.0-development"), true);
 });
