@@ -21,7 +21,20 @@
 
 ## 安装
 
-源码构建：
+### npm
+
+```bash
+npm install -g wtx
+```
+
+### Homebrew
+
+```bash
+brew tap spencer17x/wtx
+brew install wtx
+```
+
+### 源码构建
 
 ```bash
 go build -o bin/wtx ./cmd/wtx

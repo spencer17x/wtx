@@ -21,7 +21,20 @@ Creating a new worktree is usually only the first step. Teams still need to copy
 
 ## Install
 
-Build from source:
+### npm
+
+```bash
+npm install -g wtx
+```
+
+### Homebrew
+
+```bash
+brew tap spencer17x/wtx
+brew install wtx
+```
+
+### Build from source
 
 ```bash
 go build -o bin/wtx ./cmd/wtx
