@@ -2,8 +2,8 @@
 
 ## Required Secrets
 
-- `NPM_TOKEN`
-- `HOMEBREW_TAP_TOKEN`
+- `NPM_TOKEN` with npm publish access
+- `HOMEBREW_TAP_TOKEN` with push access to `spencer17x/homebrew-wtx`
 
 ## Required External Setup
 

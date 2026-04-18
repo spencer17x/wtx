@@ -33,18 +33,22 @@ npm install -g wtx
 
 ### Homebrew
 
-```bash
-brew tap spencer17x/wtx
-brew install wtx
-```
-
-Optional shortcut:
+Either Homebrew install form is supported:
 
 ```bash
 brew install spencer17x/wtx/wtx
 ```
 
+or:
+
+```bash
+brew tap spencer17x/wtx
+brew install wtx
+```
+
 ### Build from source
+
+Requirements: Go must be installed locally.
 
 ```bash
 go build -o bin/wtx ./cmd/wtx
