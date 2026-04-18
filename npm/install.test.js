@@ -36,6 +36,8 @@ test("follows redirects when downloading release assets", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wtx-install-"));
   const destination = path.join(tempDir, "asset.tgz");
   const urls = [];
+  let createStreamCalls = 0;
+  let cleanupCount = 0;
 
   const getImpl = (url, callback) => {
     urls.push(url);
@@ -55,17 +57,37 @@ test("follows redirects when downloading release assets", async () => {
     return { on() {} };
   };
 
+  const rmImpl = (target, options, cb) => {
+    cleanupCount += 1;
+    setTimeout(() => {
+      fs.rmSync(target, { force: true });
+      cb();
+    }, 25);
+  };
+
   await downloadFile(
     "https://github.com/spencer17x/wtx/releases/download/v0.1.0/wtx_Darwin_arm64.tar.gz",
     destination,
-    { getImpl },
+    {
+      getImpl,
+      createWriteStreamImpl: (target) => {
+        createStreamCalls += 1;
+        return fs.createWriteStream(target);
+      },
+      rmImpl,
+    },
   );
+
+  await new Promise((resolve) => setTimeout(resolve, 60));
 
   assert.deepEqual(urls, [
     "https://github.com/spencer17x/wtx/releases/download/v0.1.0/wtx_Darwin_arm64.tar.gz",
     "https://github.com/download/real-asset.tgz",
   ]);
+  assert.equal(createStreamCalls, 2);
+  assert.equal(cleanupCount, 1);
   assert.equal(fs.readFileSync(destination, "utf8"), "payload");
+  assert.equal(fs.existsSync(destination), true);
 });
 
 test("cleans up partial downloads when the response stream fails", async () => {
@@ -198,4 +220,30 @@ test("surfaces a clear error when tar extraction fails", async () => {
     }),
     /Unable to extract wtx archive: tar exited 2/,
   );
+});
+
+test("removes the binary when extraction fails after writing it", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wtx-install-"));
+  const binaryPath = path.join(tempDir, "npm", "bin", "wtx");
+
+  await assert.rejects(
+    installBinary({
+      packageRoot: tempDir,
+      version: "0.1.0",
+      platform: "darwin",
+      arch: "arm64",
+      downloadFileImpl: async (_url, destination) => {
+        fs.mkdirSync(path.dirname(destination), { recursive: true });
+        fs.writeFileSync(destination, "archive");
+      },
+      execFileSyncImpl: () => {
+        fs.mkdirSync(path.dirname(binaryPath), { recursive: true });
+        fs.writeFileSync(binaryPath, "partial binary");
+        throw new Error("tar exited 2");
+      },
+    }),
+    /Unable to extract wtx archive: tar exited 2/,
+  );
+
+  assert.equal(fs.existsSync(binaryPath), false);
 });

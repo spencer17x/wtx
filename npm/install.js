@@ -66,17 +66,24 @@ function downloadFile(
       const isRedirect = response.statusCode >= 300 && response.statusCode < 400;
       if (isRedirect && response.headers.location) {
         settled = true;
-        cleanupDestination(destination, file, rmImpl);
-        if (redirectCount >= 5) {
-          reject(new Error(`Too many redirects while downloading ${url}`));
-          return;
-        }
 
-        downloadFile(
-          new URL(response.headers.location, url).toString(),
-          destination,
-          { getImpl, redirectCount: redirectCount + 1 },
-        ).then(resolve, reject);
+        (async () => {
+          await cleanupDestination(destination, file, rmImpl);
+          if (redirectCount >= 5) {
+            throw new Error(`Too many redirects while downloading ${url}`);
+          }
+
+          return downloadFile(
+            new URL(response.headers.location, url).toString(),
+            destination,
+            {
+              getImpl,
+              createWriteStreamImpl,
+              rmImpl,
+              redirectCount: redirectCount + 1,
+            },
+          );
+        })().then(resolve, reject);
         return;
       }
 
@@ -151,6 +158,9 @@ async function installBinary({
     await downloadFileImpl(url, archivePath);
     extractArchive(archivePath, path.dirname(binaryPath), { execFileSyncImpl });
     fs.chmodSync(binaryPath, 0o755);
+  } catch (error) {
+    fs.rmSync(binaryPath, { force: true });
+    throw error;
   } finally {
     fs.rmSync(archivePath, { force: true });
   }
