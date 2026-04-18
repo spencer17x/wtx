@@ -64,3 +64,23 @@ test("writes the formula to an arbitrary output path", () => {
   assert.equal(fs.readFileSync(outputPath, "utf8").includes('version "0.1.0"'), true);
   assert.equal(fs.readFileSync(outputPath, "utf8").includes('sha256 "abc123"'), true);
 });
+
+test("renders the real template without leaving placeholders behind", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wtx-formula-"));
+  const outputPath = path.join(tempDir, "Formula", "wtx.rb");
+
+  updateFormula({
+    templatePath: path.join(__dirname, "..", "packaging", "homebrew", "wtx.rb.tmpl"),
+    outputPath,
+    version: "0.1.0",
+    sha256: "abc123",
+    url: "https://github.com/spencer17x/wtx/archive/refs/tags/v0.1.0.tar.gz",
+  });
+
+  const formula = fs.readFileSync(outputPath, "utf8");
+  assert.match(formula, /url "https:\/\/github\.com\/spencer17x\/wtx\/archive\/refs\/tags\/v0\.1\.0\.tar\.gz"/);
+  assert.match(formula, /sha256 "abc123"/);
+  assert.match(formula, /version "0.1.0"/);
+  assert.equal(formula.includes("{{"), false);
+  assert.equal(formula.includes("}}"), false);
+});
