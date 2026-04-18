@@ -37,7 +37,7 @@ function getAssetInfo(platform, arch) {
 }
 
 function getVersionFromTag(tag) {
-  const match = /^v(\d+\.\d+\.\d+)$/.exec(tag);
+  const match = /^v((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*))$/.exec(tag);
   if (!match) {
     throw new Error("Expected a tag in the form vX.Y.Z");
   }

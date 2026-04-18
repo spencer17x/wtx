@@ -16,8 +16,6 @@
   },
   "files": [
     "npm",
-    "scripts",
-    "packaging",
     "README.md",
     "README.zh-CN.md",
     "LICENSE"
