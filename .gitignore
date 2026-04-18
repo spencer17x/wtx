@@ -143,3 +143,6 @@ bin/
 *.test
 *.out
 .coverprofile
+
+# Local git worktrees
+.worktrees/
