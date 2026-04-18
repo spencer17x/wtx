@@ -1,5 +1,7 @@
 # wtx
 
+[中文说明](./README.zh-CN.md)
+
 `wtx` is a Go CLI that extends `git worktree add` with local environment setup.
 
 Creating a new worktree is usually only the first step. Teams still need to copy local config, reuse editor folders, rebuild dependency environments, and avoid carrying over build artifacts. `wtx` sits on top of Git’s native worktree flow and handles that initialization layer.
