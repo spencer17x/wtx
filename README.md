@@ -6,6 +6,8 @@
 
 Creating a new worktree is usually only the first step. Teams still need to copy local config, reuse editor folders, rebuild dependency environments, and avoid carrying over build artifacts. `wtx` sits on top of Git’s native worktree flow and handles that initialization layer.
 
+Release guide: [docs/releasing.md](./docs/releasing.md)
+
 ## What It Does
 
 - Wraps `git worktree add` instead of replacing it

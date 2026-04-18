@@ -6,6 +6,8 @@
 
 创建 worktree 往往只是第一步。实际开发里，团队通常还需要复制本地配置、复用编辑器目录、恢复依赖环境，并避免把构建产物带进新目录。`wtx` 保留 Git 原生 worktree 工作流，同时处理这层初始化问题。
 
+发布说明见：[docs/releasing.md](./docs/releasing.md)
+
 ## 项目能力
 
 - 封装 `git worktree add`，但不替代 Git

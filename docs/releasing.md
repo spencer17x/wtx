@@ -12,12 +12,12 @@
 
 ## Normal Development
 
-Pushes and pull requests run CI only.
+Branch pushes and pull requests run CI only.
 
 ## Shipping a Release
 
 1. Verify `main` is green.
-2. Create a semantic version tag.
+2. Create a tag in the form `vX.Y.Z`.
 3. Push the tag.
 
 ```bash
