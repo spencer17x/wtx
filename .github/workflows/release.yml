@@ -50,37 +50,42 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
           REPOSITORY: ${{ github.repository }}
         run: |
-          if curl -fsSL \
+          status="$(curl -sS -o /tmp/github-release.json -w '%{http_code}' \
             -H "Authorization: Bearer ${GITHUB_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${REPOSITORY}/releases/tags/${RELEASE_TAG}" >/dev/null; then
+            "https://api.github.com/repos/${REPOSITORY}/releases/tags/${RELEASE_TAG}")"
+          if [ "$status" = "200" ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
+          elif [ "$status" = "404" ]; then
+            echo "exists=false" >> "$GITHUB_OUTPUT"
           else
-            status=$?
-            if [ "$status" -eq 22 ]; then
-              echo "exists=false" >> "$GITHUB_OUTPUT"
-            else
-              exit "$status"
-            fi
+            echo "Unexpected GitHub release lookup status: $status" >&2
+            exit 1
           fi
       - name: Publish GitHub release
         if: steps.release_exists.outputs.exists != 'true'
         run: npm run release:publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Resolve package name
+        id: package_name
+        run: |
+          echo "name=$(node -e "process.stdout.write(require('./package.json').name)")" >> "$GITHUB_OUTPUT"
       - name: Check if npm version is already published
         id: npm_exists
         env:
+          PACKAGE_NAME: ${{ steps.package_name.outputs.name }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          if npm view "wtx@${VERSION}" version >/dev/null 2>&1; then
+          if npm view "${PACKAGE_NAME}@${VERSION}" version --json >/tmp/npm-version.json 2>/tmp/npm-version.err; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
-            status=$?
-            if [ "$status" -eq 1 ]; then
+            if grep -Eq '(^|[[:space:]])(E404|404 Not Found|code E404)([[:space:]]|$)' /tmp/npm-version.err; then
               echo "exists=false" >> "$GITHUB_OUTPUT"
             else
-              exit "$status"
+              echo "Unexpected npm registry lookup failure:" >&2
+              cat /tmp/npm-version.err >&2
+              exit 1
             fi
           fi
       - name: Publish npm package
