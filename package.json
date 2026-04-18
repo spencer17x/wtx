@@ -21,7 +21,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "test:npm": "node --test npm/*.test.js scripts/*.test.js",
+    "postinstall": "node npm/install.js",
+    "test:npm": "node --test npm/*.test.js",
     "test": "go test ./... && npm run test:npm"
   },
   "engines": {
