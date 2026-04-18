@@ -31,6 +31,7 @@
   "scripts": {
     "release:check": "go run github.com/goreleaser/goreleaser/v2@v2.15.3 check",
     "release:snapshot": "go run github.com/goreleaser/goreleaser/v2@v2.15.3 release --snapshot --clean --skip=publish",
+    "release:publish": "go run github.com/goreleaser/goreleaser/v2@v2.15.3 release --clean",
     "postinstall": "node npm/install.js",
     "test:npm": "node --test npm/*.test.js scripts/*.test.js",
     "test": "go test ./... && npm run test:npm"
