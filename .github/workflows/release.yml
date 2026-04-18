@@ -43,27 +43,31 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
       - name: Run tests
         run: npm test
-      - name: Check for existing GitHub release
-        id: release_exists
+      - name: Check for complete GitHub release assets
+        id: release_state
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.ref_name }}
           REPOSITORY: ${{ github.repository }}
         run: |
-          status="$(curl -sS -o /tmp/github-release.json -w '%{http_code}' \
+          set -euo pipefail
+          RELEASE_JSON_PATH="$(mktemp)"
+          status="$(curl -sS -o "$RELEASE_JSON_PATH" -w '%{http_code}' \
             -H "Authorization: Bearer ${GITHUB_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${REPOSITORY}/releases/tags/${RELEASE_TAG}")"
           if [ "$status" = "200" ]; then
+            node scripts/check-release-assets.js "$RELEASE_JSON_PATH"
             echo "exists=true" >> "$GITHUB_OUTPUT"
           elif [ "$status" = "404" ]; then
             echo "exists=false" >> "$GITHUB_OUTPUT"
           else
             echo "Unexpected GitHub release lookup status: $status" >&2
+            cat "$RELEASE_JSON_PATH" >&2
             exit 1
           fi
       - name: Publish GitHub release
-        if: steps.release_exists.outputs.exists != 'true'
+        if: steps.release_state.outputs.exists != 'true'
         run: npm run release:publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -97,12 +101,16 @@ jobs:
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
+          set -euo pipefail
           VERSION="${{ steps.version.outputs.version }}"
           TAG="${GITHUB_REF_NAME}"
           URL="https://github.com/spencer17x/wtx/archive/refs/tags/${TAG}.tar.gz"
-          SHA256="$(curl -fsSL "$URL" | shasum -a 256 | awk '{print $1}')"
-          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/spencer17x/homebrew-wtx.git" /tmp/homebrew-wtx
+          ARCHIVE_PATH="$(mktemp)"
           TEMP_FORMULA="$(mktemp)"
+          trap 'rm -f "$ARCHIVE_PATH" "$TEMP_FORMULA"' EXIT
+          curl -fsSL --output "$ARCHIVE_PATH" "$URL"
+          SHA256="$(shasum -a 256 "$ARCHIVE_PATH" | awk '{print $1}')"
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/spencer17x/homebrew-wtx.git" /tmp/homebrew-wtx
           node scripts/update-homebrew-formula.js \
             packaging/homebrew/wtx.rb.tmpl \
             "$TEMP_FORMULA" \

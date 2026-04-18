@@ -3,8 +3,12 @@ name: Release Dry Run
 on:
   workflow_dispatch:
     inputs:
-      tag:
-        description: Release tag to validate
+      ref:
+        description: Branch, tag, or commit SHA to validate
+        required: true
+        default: main
+      version:
+        description: Candidate release version in the form vX.Y.Z
         required: true
         default: v0.0.0
 
@@ -16,7 +20,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: refs/tags/${{ inputs.tag }}
+          ref: ${{ inputs.ref }}
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -25,21 +29,23 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Validate tag and derive package version
+      - name: Validate candidate version and derive package version
         id: version
         run: |
           VERSION="$(node -e "const { getVersionFromTag } = require('./npm/platform'); process.stdout.write(getVersionFromTag(process.env.RELEASE_TAG));")"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
         env:
-          RELEASE_TAG: ${{ inputs.tag }}
+          RELEASE_TAG: ${{ inputs.version }}
       - name: Derive package version
         run: |
           node -e "const fs=require('fs');const pkg=require('./package.json');pkg.version=process.env.VERSION;fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');"
         env:
           VERSION: ${{ steps.version.outputs.version }}
-      - name: Dry-run package publish shape
-        run: npm pack --dry-run
       - name: Run tests
         run: npm test
+      - name: Validate GoReleaser config
+        run: npm run release:check
+      - name: Dry-run package publish shape
+        run: npm pack --dry-run
       - name: Run release snapshot
         run: npm run release:snapshot
