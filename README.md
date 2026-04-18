@@ -54,6 +54,8 @@ Requirements: Go must be installed locally.
 go build -o bin/wtx ./cmd/wtx
 ```
 
+This produces `./bin/wtx` if you want to run the locally built binary directly.
+
 Run tests:
 
 ```bash
@@ -65,25 +67,25 @@ go test ./...
 Create a worktree from an existing branch:
 
 ```bash
-./bin/wtx add feature/my-branch
+wtx add feature/my-branch
 ```
 
 Create a worktree and a new branch:
 
 ```bash
-./bin/wtx add feature/my-branch --new-branch --base main
+wtx add feature/my-branch --new-branch --base main
 ```
 
 Preview the plan without changing anything:
 
 ```bash
-./bin/wtx add feature/my-branch --new-branch --dry-run --non-interactive
+wtx add feature/my-branch --new-branch --dry-run --non-interactive
 ```
 
 Create multiple worktrees in one command:
 
 ```bash
-./bin/wtx batch-add feature/one feature/two --new-branch --root ~/worktrees --non-interactive
+wtx batch-add feature/one feature/two --new-branch --root ~/worktrees --non-interactive
 ```
 
 ## Commands
@@ -91,7 +93,7 @@ Create multiple worktrees in one command:
 ### `add`
 
 ```bash
-./bin/wtx add <branch> [options]
+wtx add <branch> [options]
 ```
 
 Creates a single worktree.
@@ -99,7 +101,7 @@ Creates a single worktree.
 ### `batch-add`
 
 ```bash
-./bin/wtx batch-add <branch> [<branch> ...] [options]
+wtx batch-add <branch> [<branch> ...] [options]
 ```
 
 Creates multiple worktrees in sequence using the same options.
@@ -281,19 +283,19 @@ Hook processes receive these environment variables:
 Create a new branch worktree with defaults:
 
 ```bash
-./bin/wtx add feature/refactor-auth --new-branch
+wtx add feature/refactor-auth --new-branch
 ```
 
 Preview everything without making changes:
 
 ```bash
-./bin/wtx add feature/refactor-auth --new-branch --dry-run --non-interactive
+wtx add feature/refactor-auth --new-branch --dry-run --non-interactive
 ```
 
 Create multiple review worktrees under a shared root:
 
 ```bash
-./bin/wtx batch-add review/a review/b review/c --new-branch --root ~/worktrees --non-interactive
+wtx batch-add review/a review/b review/c --new-branch --root ~/worktrees --non-interactive
 ```
 
 ## Project Structure

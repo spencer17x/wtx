@@ -54,6 +54,8 @@ brew install wtx
 go build -o bin/wtx ./cmd/wtx
 ```
 
+如果你想直接运行本地构建的二进制，构建结果会输出到 `./bin/wtx`。
+
 运行测试：
 
 ```bash
@@ -65,25 +67,25 @@ go test ./...
 基于已有分支创建一个 worktree：
 
 ```bash
-./bin/wtx add feature/my-branch
+wtx add feature/my-branch
 ```
 
 创建 worktree 并同时创建新分支：
 
 ```bash
-./bin/wtx add feature/my-branch --new-branch --base main
+wtx add feature/my-branch --new-branch --base main
 ```
 
 只预览执行计划，不做任何修改：
 
 ```bash
-./bin/wtx add feature/my-branch --new-branch --dry-run --non-interactive
+wtx add feature/my-branch --new-branch --dry-run --non-interactive
 ```
 
 一次性创建多个 worktree：
 
 ```bash
-./bin/wtx batch-add feature/one feature/two --new-branch --root ~/worktrees --non-interactive
+wtx batch-add feature/one feature/two --new-branch --root ~/worktrees --non-interactive
 ```
 
 ## 命令
@@ -91,7 +93,7 @@ go test ./...
 ### `add`
 
 ```bash
-./bin/wtx add <branch> [options]
+wtx add <branch> [options]
 ```
 
 创建单个 worktree。
@@ -99,7 +101,7 @@ go test ./...
 ### `batch-add`
 
 ```bash
-./bin/wtx batch-add <branch> [<branch> ...] [options]
+wtx batch-add <branch> [<branch> ...] [options]
 ```
 
 按顺序创建多个 worktree，并复用同一组选项。
@@ -281,19 +283,19 @@ Hook 进程会收到以下环境变量：
 使用默认行为创建一个新分支 worktree：
 
 ```bash
-./bin/wtx add feature/refactor-auth --new-branch
+wtx add feature/refactor-auth --new-branch
 ```
 
 先预览再决定是否执行：
 
 ```bash
-./bin/wtx add feature/refactor-auth --new-branch --dry-run --non-interactive
+wtx add feature/refactor-auth --new-branch --dry-run --non-interactive
 ```
 
 在统一目录下批量创建多个 review worktree：
 
 ```bash
-./bin/wtx batch-add review/a review/b review/c --new-branch --root ~/worktrees --non-interactive
+wtx batch-add review/a review/b review/c --new-branch --root ~/worktrees --non-interactive
 ```
 
 ## 项目结构

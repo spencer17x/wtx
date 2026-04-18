@@ -17,7 +17,7 @@ Non-tag branch pushes and pull requests run CI only. Tag pushes still run CI, an
 ## Shipping a Release
 
 1. Verify `main` is green.
-2. Create a tag in the form `vX.Y.Z`.
+2. Create a tag in the form `vX.Y.Z` on the commit being released, typically the intended `main` tip after CI is green.
 3. Push the tag.
 
 ```bash
