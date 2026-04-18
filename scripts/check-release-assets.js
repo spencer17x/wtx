@@ -1,15 +1,10 @@
 const fs = require("node:fs");
+const { getReleaseArchives } = require("../npm/platform");
 
-const REQUIRED_RELEASE_ASSET_NAMES = [
-  "wtx_Darwin_arm64.tar.gz",
-  "wtx_Darwin_x86_64.tar.gz",
-  "wtx_Linux_arm64.tar.gz",
-  "wtx_Linux_x86_64.tar.gz",
-  "checksums.txt",
-];
+const CHECKSUM_ASSET_NAME = "checksums.txt";
 
 function getRequiredReleaseAssetNames() {
-  return [...REQUIRED_RELEASE_ASSET_NAMES];
+  return [...getReleaseArchives(), CHECKSUM_ASSET_NAME];
 }
 
 function getReleaseAssetProblems(release) {
@@ -18,7 +13,7 @@ function getReleaseAssetProblems(release) {
   const missing = [];
   const empty = [];
 
-  for (const name of REQUIRED_RELEASE_ASSET_NAMES) {
+  for (const name of getRequiredReleaseAssetNames()) {
     const asset = assetsByName.get(name);
     if (!asset) {
       missing.push(name);

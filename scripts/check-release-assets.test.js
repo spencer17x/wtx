@@ -1,5 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const { getReleaseArchives } = require("../npm/platform");
 
 const {
   assertReleaseAssetsComplete,
@@ -21,10 +22,7 @@ function buildRelease(assetOverrides = {}) {
 
 test("lists the required release archives and checksum manifest", () => {
   assert.deepEqual(getRequiredReleaseAssetNames(), [
-    "wtx_Darwin_arm64.tar.gz",
-    "wtx_Darwin_x86_64.tar.gz",
-    "wtx_Linux_arm64.tar.gz",
-    "wtx_Linux_x86_64.tar.gz",
+    ...getReleaseArchives(),
     "checksums.txt",
   ]);
 });

@@ -43,7 +43,7 @@ git push origin v0.1.0
 
 ## 重新运行时的行为
 
-GitHub Release 产物是后续发布步骤的前提。
+重新运行时，会先检查 GitHub Release 产物是否完整，再决定是否继续 npm 发布；Homebrew 则单独对标签源码归档做校验和计算。
 
 - 如果对应的 GitHub Release 还不存在，工作流会运行 GoReleaser 创建 Release 并上传产物。
 - 如果 Release 已存在，且包含预期的平台归档文件和 `checksums.txt`，工作流会跳过 GoReleaser，并继续后续发布步骤。

@@ -36,6 +36,18 @@ function getAssetInfo(platform, arch) {
   };
 }
 
+function getReleaseArchives() {
+  const archives = [];
+
+  for (const [platform, architectures] of Object.entries(SUPPORTED_PLATFORMS)) {
+    for (const arch of Object.keys(architectures)) {
+      archives.push(getAssetInfo(platform, arch).archive);
+    }
+  }
+
+  return archives;
+}
+
 function getVersionFromTag(tag) {
   const match = /^v((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*))$/.exec(tag);
   if (!match) {
@@ -47,5 +59,6 @@ function getVersionFromTag(tag) {
 
 module.exports = {
   getAssetInfo,
+  getReleaseArchives,
   getVersionFromTag,
 };

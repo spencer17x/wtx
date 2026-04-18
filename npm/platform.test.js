@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 
 const {
   getAssetInfo,
+  getReleaseArchives,
   getVersionFromTag,
 } = require("./platform");
 
@@ -65,4 +66,13 @@ test("rejects release tags with leading zeroes", () => {
     () => getVersionFromTag("v01.2.3"),
     /Expected a tag in the form vX.Y.Z/,
   );
+});
+
+test("lists the release archives used by installers and release checks", () => {
+  assert.deepEqual(getReleaseArchives(), [
+    "wtx_Darwin_arm64.tar.gz",
+    "wtx_Darwin_x86_64.tar.gz",
+    "wtx_Linux_arm64.tar.gz",
+    "wtx_Linux_x86_64.tar.gz",
+  ]);
 });

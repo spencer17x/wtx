@@ -43,7 +43,7 @@ That tag triggers:
 
 ## Rerun Behavior
 
-GitHub Release artifacts are the source of truth for downstream publishing.
+GitHub Release asset completeness gates npm publishing on reruns, while the Homebrew step separately hashes the tag source archive.
 
 - If the release does not exist yet, the workflow runs GoReleaser to create the release and upload assets.
 - If the release already exists and contains the expected archives plus `checksums.txt`, the workflow skips GoReleaser and can continue with downstream publish steps.
