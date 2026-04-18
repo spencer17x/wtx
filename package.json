@@ -29,8 +29,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "release:check": "goreleaser check",
-    "release:snapshot": "goreleaser release --snapshot --clean --skip publish",
+    "release:check": "go run github.com/goreleaser/goreleaser/v2@v2.15.3 check",
+    "release:snapshot": "go run github.com/goreleaser/goreleaser/v2@v2.15.3 release --snapshot --clean --skip=publish",
     "postinstall": "node npm/install.js",
     "test:npm": "node --test npm/*.test.js",
     "test": "go test ./... && npm run test:npm"
