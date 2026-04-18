@@ -23,9 +23,9 @@ Release guide: [docs/releasing.md](./docs/releasing.md)
 
 ## Install
 
-Prerequisites: `npm install -g wtx` supports macOS/Linux on `x64` and `arm64`, and requires Node.js 18+ with npm.
-
 ### npm
+
+Requirements: supports macOS/Linux on `x64` and `arm64`, and requires Node.js 18+ with npm.
 
 ```bash
 npm install -g wtx
@@ -36,6 +36,12 @@ npm install -g wtx
 ```bash
 brew tap spencer17x/wtx
 brew install wtx
+```
+
+Optional shortcut:
+
+```bash
+brew install spencer17x/wtx/wtx
 ```
 
 ### Build from source

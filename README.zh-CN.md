@@ -23,9 +23,9 @@
 
 ## 安装
 
-前置条件：`npm install -g wtx` 目前支持 macOS/Linux 的 `x64` 和 `arm64`，并且要求 Node.js 18+ 与 npm。
-
 ### npm
+
+前置条件：该安装方式目前支持 macOS/Linux 的 `x64` 和 `arm64`，并且要求 Node.js 18+ 与 npm。
 
 ```bash
 npm install -g wtx
@@ -36,6 +36,12 @@ npm install -g wtx
 ```bash
 brew tap spencer17x/wtx
 brew install wtx
+```
+
+可选快捷方式：
+
+```bash
+brew install spencer17x/wtx/wtx
 ```
 
 ### 源码构建
