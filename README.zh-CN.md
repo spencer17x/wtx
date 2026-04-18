@@ -23,6 +23,8 @@
 
 ## 安装
 
+前置条件：`npm install -g wtx` 目前支持 macOS/Linux 的 `x64` 和 `arm64`，并且要求 Node.js 18+ 与 npm。
+
 ### npm
 
 ```bash

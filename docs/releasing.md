@@ -12,7 +12,7 @@
 
 ## Normal Development
 
-Branch pushes and pull requests run CI only.
+Non-tag branch pushes and pull requests run CI only. Tag pushes still run CI, and they also trigger the release workflow.
 
 ## Shipping a Release
 

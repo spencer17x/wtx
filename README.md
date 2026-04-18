@@ -23,6 +23,8 @@ Release guide: [docs/releasing.md](./docs/releasing.md)
 
 ## Install
 
+Prerequisites: `npm install -g wtx` supports macOS/Linux on `x64` and `arm64`, and requires Node.js 18+ with npm.
+
 ### npm
 
 ```bash
