@@ -13,31 +13,41 @@ type Worktree struct {
 }
 
 func parseWorktreeListPorcelain(output string) ([]Worktree, error) {
-	blocks := strings.Split(strings.TrimSpace(output), "\n\n")
-	worktrees := make([]Worktree, 0, len(blocks))
+	if strings.Contains(output, "\x00") {
+		return parseWorktreeListPorcelainZ(output)
+	}
 
-	for _, block := range blocks {
-		block = strings.TrimSpace(block)
-		if block == "" {
+	return parseWorktreeListPorcelainNewline(output)
+}
+
+func parseWorktreeListPorcelainZ(output string) ([]Worktree, error) {
+	tokens := strings.Split(output, "\x00")
+	worktrees := make([]Worktree, 0, len(tokens)/4+1)
+	current := make([]string, 0, 4)
+
+	for _, token := range tokens {
+		if token == "" {
+			if len(current) == 0 {
+				continue
+			}
+
+			worktree, err := parseWorktreeRecord(current)
+			if err != nil {
+				return nil, err
+			}
+
+			worktrees = append(worktrees, worktree)
+			current = current[:0]
 			continue
 		}
 
-		var worktree Worktree
-		for _, line := range strings.Split(block, "\n") {
-			switch {
-			case strings.HasPrefix(line, "worktree "):
-				worktree.Path = strings.TrimSpace(strings.TrimPrefix(line, "worktree "))
-			case strings.HasPrefix(line, "HEAD "):
-				worktree.Head = strings.TrimSpace(strings.TrimPrefix(line, "HEAD "))
-			case strings.HasPrefix(line, "branch "):
-				worktree.BranchRef = strings.TrimSpace(strings.TrimPrefix(line, "branch "))
-			case strings.HasPrefix(line, "prunable"):
-				worktree.Prunable = true
-			}
-		}
+		current = append(current, token)
+	}
 
-		if worktree.Path == "" {
-			return nil, fmt.Errorf("invalid git worktree output: missing worktree path")
+	if len(current) > 0 {
+		worktree, err := parseWorktreeRecord(current)
+		if err != nil {
+			return nil, err
 		}
 
 		worktrees = append(worktrees, worktree)
@@ -46,8 +56,52 @@ func parseWorktreeListPorcelain(output string) ([]Worktree, error) {
 	return worktrees, nil
 }
 
+func parseWorktreeListPorcelainNewline(output string) ([]Worktree, error) {
+	blocks := strings.Split(output, "\n\n")
+	worktrees := make([]Worktree, 0, len(blocks))
+
+	for _, block := range blocks {
+		block = strings.TrimRight(block, "\r\n")
+		if block == "" {
+			continue
+		}
+
+		worktree, err := parseWorktreeRecord(strings.Split(block, "\n"))
+		if err != nil {
+			return nil, err
+		}
+
+		worktrees = append(worktrees, worktree)
+	}
+
+	return worktrees, nil
+}
+
+func parseWorktreeRecord(fields []string) (Worktree, error) {
+	var worktree Worktree
+
+	for _, field := range fields {
+		switch {
+		case strings.HasPrefix(field, "worktree "):
+			worktree.Path = strings.TrimPrefix(field, "worktree ")
+		case strings.HasPrefix(field, "HEAD "):
+			worktree.Head = strings.TrimPrefix(field, "HEAD ")
+		case strings.HasPrefix(field, "branch "):
+			worktree.BranchRef = strings.TrimPrefix(field, "branch ")
+		case strings.HasPrefix(field, "prunable"):
+			worktree.Prunable = true
+		}
+	}
+
+	if worktree.Path == "" {
+		return Worktree{}, fmt.Errorf("invalid git worktree output: missing worktree path")
+	}
+
+	return worktree, nil
+}
+
 func ListWorktrees(repoRoot string) ([]Worktree, error) {
-	output, err := captureCommand(repoRoot, "git", "worktree", "list", "--porcelain")
+	output, err := captureCommand(repoRoot, "git", "worktree", "list", "--porcelain", "-z")
 	if err != nil {
 		return nil, err
 	}
@@ -57,14 +111,20 @@ func ListWorktrees(repoRoot string) ([]Worktree, error) {
 
 func resolveWorktreeByBranch(worktrees []Worktree, branchName string) (Worktree, error) {
 	targetRef := "refs/heads/" + branchName
+	var prunableMatch bool
 	for _, worktree := range worktrees {
 		if worktree.BranchRef != targetRef {
 			continue
 		}
 		if worktree.Prunable {
-			return Worktree{}, fmt.Errorf("worktree for branch %s is prunable; run git worktree prune", branchName)
+			prunableMatch = true
+			continue
 		}
 		return worktree, nil
+	}
+
+	if prunableMatch {
+		return Worktree{}, fmt.Errorf("worktree for branch %s is prunable; run git worktree prune", branchName)
 	}
 
 	return Worktree{}, fmt.Errorf("no worktree found for branch: %s", branchName)
