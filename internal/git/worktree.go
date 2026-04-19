@@ -111,6 +111,8 @@ func ListWorktrees(repoRoot string) ([]Worktree, error) {
 
 func resolveWorktreeByBranch(worktrees []Worktree, branchName string) (Worktree, error) {
 	targetRef := "refs/heads/" + branchName
+	var healthyMatch *Worktree
+	var healthyMatchCount int
 	var prunableMatch bool
 	for _, worktree := range worktrees {
 		if worktree.BranchRef != targetRef {
@@ -120,7 +122,19 @@ func resolveWorktreeByBranch(worktrees []Worktree, branchName string) (Worktree,
 			prunableMatch = true
 			continue
 		}
-		return worktree, nil
+		healthyMatchCount++
+		if healthyMatch == nil {
+			matched := worktree
+			healthyMatch = &matched
+		}
+	}
+
+	if healthyMatchCount == 1 && healthyMatch != nil {
+		return *healthyMatch, nil
+	}
+
+	if healthyMatchCount > 1 {
+		return Worktree{}, fmt.Errorf("multiple worktrees found for branch: %s", branchName)
 	}
 
 	if prunableMatch {

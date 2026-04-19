@@ -78,6 +78,19 @@ func TestResolveWorktreeByBranchPrefersHealthyExactMatchOverPrunable(t *testing.
 	}
 }
 
+func TestResolveWorktreeByBranchRejectsAmbiguousHealthyExactMatches(t *testing.T) {
+	t.Parallel()
+
+	worktrees := []Worktree{
+		{Path: "/repo-feature-a", BranchRef: "refs/heads/feature/demo"},
+		{Path: "/repo-feature-b", BranchRef: "refs/heads/feature/demo"},
+	}
+
+	if _, err := resolveWorktreeByBranch(worktrees, "feature/demo"); err == nil {
+		t.Fatal("expected ambiguous healthy exact matches to fail")
+	}
+}
+
 func TestParseWorktreeListPorcelainZHandlesNewlineInPath(t *testing.T) {
 	t.Parallel()
 
