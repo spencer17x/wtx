@@ -32,12 +32,14 @@ type parsedAddOptions struct {
 type parsedCLI struct {
 	command string
 	options parsedAddOptions
+	target  string
 }
 
 func printUsage(stdout io.Writer) {
 	fmt.Fprintln(stdout, `Usage:
   wtx add [branch] [options]
   wtx batch-add <branch> [<branch> ...] [options]
+  wtx path <branch>
 
 		Options:
 		  --new-branch          Create a new branch for the worktree
@@ -77,8 +79,15 @@ func parseArgv(argv []string) (parsedCLI, error) {
 	}
 
 	command := argv[0]
-	if command != "add" && command != "batch-add" {
+	if command != "add" && command != "batch-add" && command != "path" {
 		return parsedCLI{}, fmt.Errorf("unknown command: %s", command)
+	}
+
+	if command == "path" {
+		if len(argv) != 2 {
+			return parsedCLI{}, fmt.Errorf("%s requires exactly one positional argument", command)
+		}
+		return parsedCLI{command: command, target: argv[1]}, nil
 	}
 
 	options := parsedAddOptions{}
@@ -603,6 +612,18 @@ func Run(argv []string) error {
 	repoRoot, err := wtgit.ResolveRepoRoot(".")
 	if err != nil {
 		return err
+	}
+
+	resolvePath := func(branchName string) (string, error) {
+		worktree, err := wtgit.FindWorktreeByBranch(repoRoot, branchName)
+		if err != nil {
+			return "", err
+		}
+		return worktree.Path, nil
+	}
+
+	if parsed.command == "path" {
+		return runPath(os.Stdout, parsed.target, resolvePath)
 	}
 
 	homeDir, err := os.UserHomeDir()
