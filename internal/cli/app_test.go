@@ -2,9 +2,12 @@ package cli
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/spencer17x/wtx/internal/config"
 	"github.com/spencer17x/wtx/internal/core"
 	"github.com/spencer17x/wtx/internal/fsops"
 )
@@ -153,5 +156,277 @@ func TestExecutePlanDryRunSkipsGitAndFilesystemMutation(t *testing.T) {
 
 	if !strings.Contains(output.String(), "No changes were made.") {
 		t.Fatalf("output = %q, want no changes message", output.String())
+	}
+}
+
+func TestResolveBranchModeUsesSelectedInteractiveChoice(t *testing.T) {
+	t.Parallel()
+
+	var gotMessage string
+	var gotChoices []string
+	var gotDefaultIndex int
+	ui := &promptUI{
+		selectPrompter: func(message string, choices []string, defaultIndex int) (string, error) {
+			gotMessage = message
+			gotChoices = append([]string(nil), choices...)
+			gotDefaultIndex = defaultIndex
+			return "Create a new branch", nil
+		},
+	}
+
+	mode, err := resolveBranchMode(parsedAddOptions{}, true, ui)
+	if err != nil {
+		t.Fatalf("resolveBranchMode: %v", err)
+	}
+
+	if mode != core.BranchModeNew {
+		t.Fatalf("mode = %q, want %q", mode, core.BranchModeNew)
+	}
+	if gotMessage != "How should the worktree branch be created?" {
+		t.Fatalf("message = %q", gotMessage)
+	}
+	if strings.Join(gotChoices, "|") != "Use an existing branch|Create a new branch" {
+		t.Fatalf("choices = %#v", gotChoices)
+	}
+	if gotDefaultIndex != 0 {
+		t.Fatalf("defaultIndex = %d, want 0", gotDefaultIndex)
+	}
+}
+
+func TestResolveProjectNameAndDirectoryPromptsSequentiallyInInteractiveMode(t *testing.T) {
+	t.Parallel()
+
+	var prompts []string
+	ui := &promptUI{
+		inputPrompter: func(message string, defaultValue string) (string, error) {
+			prompts = append(prompts, message+"|"+defaultValue)
+			switch len(prompts) {
+			case 1:
+				return "feature/my-branch2", nil
+			case 2:
+				return "/tmp/feature-my-branch2", nil
+			default:
+				t.Fatalf("unexpected prompt count %d", len(prompts))
+				return "", nil
+			}
+		},
+	}
+
+	projectName, directory, err := resolveProjectNameAndDirectory(
+		"/Users/alex/repos/wtx",
+		"feature/my-branch2",
+		parsedAddOptions{},
+		config.Config{},
+		true,
+		ui,
+	)
+	if err != nil {
+		t.Fatalf("resolveProjectNameAndDirectory: %v", err)
+	}
+
+	if projectName != "feature/my-branch2" {
+		t.Fatalf("projectName = %q", projectName)
+	}
+	if directory != "/tmp/feature-my-branch2" {
+		t.Fatalf("directory = %q", directory)
+	}
+	if len(prompts) != 2 {
+		t.Fatalf("prompts = %#v", prompts)
+	}
+	if prompts[0] != "Project name for the new worktree|feature/my-branch2" {
+		t.Fatalf("prompts[0] = %q", prompts[0])
+	}
+	if prompts[1] != "Directory for the new worktree|/Users/alex/repos/feature-my-branch2" {
+		t.Fatalf("prompts[1] = %q", prompts[1])
+	}
+}
+
+func TestResolveProjectNameAndDirectoryUsesEditedProjectNameForDerivedDirectory(t *testing.T) {
+	t.Parallel()
+
+	var prompts []string
+	ui := &promptUI{
+		inputPrompter: func(message string, defaultValue string) (string, error) {
+			prompts = append(prompts, message+"|"+defaultValue)
+			switch len(prompts) {
+			case 1:
+				return "release/1.0", nil
+			case 2:
+				return "", nil
+			default:
+				t.Fatalf("unexpected prompt count %d", len(prompts))
+				return "", nil
+			}
+		},
+	}
+
+	projectName, directory, err := resolveProjectNameAndDirectory(
+		"/Users/alex/repos/wtx",
+		"feature/my-branch2",
+		parsedAddOptions{},
+		config.Config{},
+		true,
+		ui,
+	)
+	if err != nil {
+		t.Fatalf("resolveProjectNameAndDirectory: %v", err)
+	}
+
+	if projectName != "release/1.0" {
+		t.Fatalf("projectName = %q", projectName)
+	}
+	if directory != "/Users/alex/repos/release-1.0" {
+		t.Fatalf("directory = %q", directory)
+	}
+	if prompts[1] != "Directory for the new worktree|/Users/alex/repos/release-1.0" {
+		t.Fatalf("prompts[1] = %q", prompts[1])
+	}
+}
+
+func TestResolveProjectNameAndDirectoryKeepsExplicitDirectoryAfterEditingProjectName(t *testing.T) {
+	t.Parallel()
+
+	var prompts []string
+	ui := &promptUI{
+		inputPrompter: func(message string, defaultValue string) (string, error) {
+			prompts = append(prompts, message+"|"+defaultValue)
+			switch len(prompts) {
+			case 1:
+				return "release/1.0", nil
+			case 2:
+				return "", nil
+			default:
+				t.Fatalf("unexpected prompt count %d", len(prompts))
+				return "", nil
+			}
+		},
+	}
+
+	projectName, directory, err := resolveProjectNameAndDirectory(
+		"/Users/alex/repos/wtx",
+		"feature/my-branch2",
+		parsedAddOptions{directory: "/tmp/custom-worktree"},
+		config.Config{},
+		true,
+		ui,
+	)
+	if err != nil {
+		t.Fatalf("resolveProjectNameAndDirectory: %v", err)
+	}
+
+	if projectName != "release/1.0" {
+		t.Fatalf("projectName = %q", projectName)
+	}
+	if directory != "/tmp/custom-worktree" {
+		t.Fatalf("directory = %q", directory)
+	}
+	if prompts[1] != "Directory for the new worktree|/tmp/custom-worktree" {
+		t.Fatalf("prompts[1] = %q", prompts[1])
+	}
+}
+
+func TestResolveProjectNameAndDirectoryNormalizesRelativeInteractiveDirectory(t *testing.T) {
+	t.Parallel()
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+
+	ui := &promptUI{
+		inputPrompter: func(message string, defaultValue string) (string, error) {
+			switch message {
+			case "Project name for the new worktree":
+				return "feature/my-branch2", nil
+			case "Directory for the new worktree":
+				return "worktrees/feature-my-branch2", nil
+			default:
+				t.Fatalf("unexpected prompt %q", message)
+				return "", nil
+			}
+		},
+	}
+
+	projectName, directory, err := resolveProjectNameAndDirectory(
+		"/Users/alex/repos/wtx",
+		"feature/my-branch2",
+		parsedAddOptions{},
+		config.Config{},
+		true,
+		ui,
+	)
+	if err != nil {
+		t.Fatalf("resolveProjectNameAndDirectory: %v", err)
+	}
+
+	if projectName != "feature/my-branch2" {
+		t.Fatalf("projectName = %q", projectName)
+	}
+	wantDirectory := filepath.Join(cwd, "worktrees/feature-my-branch2")
+	if directory != wantDirectory {
+		t.Fatalf("directory = %q, want %q", directory, wantDirectory)
+	}
+}
+
+func TestResolveProjectNameAndDirectoryFallsBackToDefaultProjectNameWhenPromptEmpty(t *testing.T) {
+	t.Parallel()
+
+	var prompts []string
+	ui := &promptUI{
+		inputPrompter: func(message string, defaultValue string) (string, error) {
+			prompts = append(prompts, message+"|"+defaultValue)
+			return "", nil
+		},
+	}
+
+	projectName, directory, err := resolveProjectNameAndDirectory(
+		"/Users/alex/repos/wtx",
+		"feature/my-branch2",
+		parsedAddOptions{},
+		config.Config{},
+		true,
+		ui,
+	)
+	if err != nil {
+		t.Fatalf("resolveProjectNameAndDirectory: %v", err)
+	}
+
+	if projectName != "feature/my-branch2" {
+		t.Fatalf("projectName = %q", projectName)
+	}
+	if directory != "/Users/alex/repos/feature-my-branch2" {
+		t.Fatalf("directory = %q", directory)
+	}
+	if len(prompts) != 2 {
+		t.Fatalf("prompts = %#v", prompts)
+	}
+	if prompts[0] != "Project name for the new worktree|feature/my-branch2" {
+		t.Fatalf("prompts[0] = %q", prompts[0])
+	}
+	if prompts[1] != "Directory for the new worktree|/Users/alex/repos/feature-my-branch2" {
+		t.Fatalf("prompts[1] = %q", prompts[1])
+	}
+}
+
+func TestResolveProjectNameAndDirectoryDerivesDefaultsWhenNonInteractive(t *testing.T) {
+	t.Parallel()
+
+	projectName, directory, err := resolveProjectNameAndDirectory(
+		"/Users/alex/repos/wtx",
+		"feature/my-branch2",
+		parsedAddOptions{},
+		config.Config{WorktreeRoot: "/Users/alex/worktrees"},
+		false,
+		&promptUI{},
+	)
+	if err != nil {
+		t.Fatalf("resolveProjectNameAndDirectory: %v", err)
+	}
+
+	if projectName != "feature/my-branch2" {
+		t.Fatalf("projectName = %q", projectName)
+	}
+	if directory != "/Users/alex/worktrees/feature-my-branch2" {
+		t.Fatalf("directory = %q", directory)
 	}
 }

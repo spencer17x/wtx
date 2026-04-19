@@ -1,14 +1,12 @@
 package cli
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/spencer17x/wtx/internal/config"
@@ -34,11 +32,6 @@ type parsedAddOptions struct {
 type parsedCLI struct {
 	command string
 	options parsedAddOptions
-}
-
-type promptUI struct {
-	reader *bufio.Reader
-	stdout io.Writer
 }
 
 func printUsage(stdout io.Writer) {
@@ -178,95 +171,6 @@ func shouldUsePrompts(shellInteractive bool, options parsedAddOptions) bool {
 	return shellInteractive && !options.yes && !options.nonInteractive
 }
 
-func newPromptUI() *promptUI {
-	return &promptUI{
-		reader: bufio.NewReader(os.Stdin),
-		stdout: os.Stdout,
-	}
-}
-
-func (ui *promptUI) readLine() (string, error) {
-	line, err := ui.reader.ReadString('\n')
-	if err != nil && !errors.Is(err, io.EOF) {
-		return "", err
-	}
-
-	return strings.TrimSpace(line), nil
-}
-
-func (ui *promptUI) askInput(message string, defaultValue string) (string, error) {
-	if defaultValue == "" {
-		fmt.Fprintf(ui.stdout, "%s: ", message)
-	} else {
-		fmt.Fprintf(ui.stdout, "%s [%s]: ", message, defaultValue)
-	}
-
-	value, err := ui.readLine()
-	if err != nil {
-		return "", err
-	}
-
-	if value == "" {
-		return defaultValue, nil
-	}
-
-	return value, nil
-}
-
-func (ui *promptUI) askSelect(message string, choices []string, defaultIndex int) (string, error) {
-	fmt.Fprintln(ui.stdout, message)
-	for index, choice := range choices {
-		marker := " "
-		if index == defaultIndex {
-			marker = "*"
-		}
-		fmt.Fprintf(ui.stdout, "  %s %d. %s\n", marker, index+1, choice)
-	}
-	fmt.Fprintf(ui.stdout, "Select an option [%d]: ", defaultIndex+1)
-
-	value, err := ui.readLine()
-	if err != nil {
-		return "", err
-	}
-
-	if value == "" {
-		return choices[defaultIndex], nil
-	}
-
-	selectedIndex, err := strconv.Atoi(value)
-	if err != nil || selectedIndex < 1 || selectedIndex > len(choices) {
-		return "", fmt.Errorf("invalid selection: %s", value)
-	}
-
-	return choices[selectedIndex-1], nil
-}
-
-func (ui *promptUI) askConfirm(message string, defaultValue bool) (bool, error) {
-	defaultText := "y/N"
-	if defaultValue {
-		defaultText = "Y/n"
-	}
-
-	fmt.Fprintf(ui.stdout, "%s [%s]: ", message, defaultText)
-	value, err := ui.readLine()
-	if err != nil {
-		return false, err
-	}
-
-	if value == "" {
-		return defaultValue, nil
-	}
-
-	switch strings.ToLower(value) {
-	case "y", "yes":
-		return true, nil
-	case "n", "no":
-		return false, nil
-	default:
-		return false, fmt.Errorf("invalid confirmation: %s", value)
-	}
-}
-
 func summarizePlan(plan []core.PlanEntry, setupCommands []core.SetupCommand) {
 	if len(plan) == 0 {
 		fmt.Println("No ignored files or directories were detected for initialization.")
@@ -371,83 +275,34 @@ func resolveProjectNameAndDirectory(repoRoot string, branchName string, options 
 		WorktreeRoot: firstNonEmpty(options.worktreeRoot, cfg.WorktreeRoot),
 	})
 
-	projectName := options.projectName
+	projectName := firstNonEmpty(options.projectName, defaults.ProjectName)
 	directoryInput := options.directory
 
 	if !interactive || options.yes {
-		if projectName == "" {
-			projectName = defaults.ProjectName
-		}
-
 		if directoryInput == "" {
 			directoryInput = core.BuildDefaultDirectory(projectName, defaults.WorktreeRoot)
 		}
 	} else {
-		location := core.ProjectLocation{
-			ProjectName:  firstNonEmpty(projectName, defaults.ProjectName),
-			WorktreeRoot: defaults.WorktreeRoot,
-			Directory:    firstNonEmpty(directoryInput, defaults.Directory),
+		var err error
+		projectName, err = ui.askInput("Project name for the new worktree", projectName)
+		if err != nil {
+			return "", "", err
+		}
+		if projectName == "" {
+			projectName = firstNonEmpty(options.projectName, defaults.ProjectName)
 		}
 
-		for {
-			fmt.Fprintln(ui.stdout, "Project and directory:")
-			fmt.Fprintf(ui.stdout, "  Project name: %s\n", location.ProjectName)
-			fmt.Fprintf(ui.stdout, "  Directory: %s\n", location.Directory)
+		directoryDefault := directoryInput
+		if directoryDefault == "" {
+			directoryDefault = core.BuildDefaultDirectory(projectName, defaults.WorktreeRoot)
+		}
 
-			choice, err := ui.askSelect(
-				"Press Enter to accept these values, or choose what to edit",
-				[]string{"Accept values", "Edit project name", "Edit directory", "Edit both"},
-				0,
-			)
-			if err != nil {
-				return "", "", err
-			}
-
-			switch choice {
-			case "Accept values":
-				projectName = location.ProjectName
-				directoryInput = location.Directory
-			case "Edit project name":
-				value, err := ui.askInput("Project name for the new worktree", location.ProjectName)
-				if err != nil {
-					return "", "", err
-				}
-				location = core.ApplyProjectLocationEdit(location, core.ProjectLocationEdit{
-					ProjectName: value,
-					EditProject: true,
-				})
-				continue
-			case "Edit directory":
-				value, err := ui.askInput("Directory for the new worktree", location.Directory)
-				if err != nil {
-					return "", "", err
-				}
-				location = core.ApplyProjectLocationEdit(location, core.ProjectLocationEdit{
-					Directory:     value,
-					EditDirectory: true,
-				})
-				continue
-			case "Edit both":
-				projectValue, err := ui.askInput("Project name for the new worktree", location.ProjectName)
-				if err != nil {
-					return "", "", err
-				}
-				nextLocation := core.ApplyProjectLocationEdit(location, core.ProjectLocationEdit{
-					ProjectName: projectValue,
-					EditProject: true,
-				})
-				directoryValue, err := ui.askInput("Directory for the new worktree", nextLocation.Directory)
-				if err != nil {
-					return "", "", err
-				}
-				location = core.ApplyProjectLocationEdit(nextLocation, core.ProjectLocationEdit{
-					Directory:     directoryValue,
-					EditDirectory: true,
-				})
-				continue
-			}
-
-			break
+		directoryInput, err = ui.askInput("Directory for the new worktree", directoryDefault)
+		if err != nil {
+			return "", "", err
+		}
+		if directoryInput == "" {
+			directoryInput = directoryDefault
 		}
 	}
 
