@@ -81,6 +81,39 @@ printf 'command:%s\n' "$*"
 	}
 }
 
+func TestShellWrapperFallsThroughForSwitchTargetHelp(t *testing.T) {
+	t.Parallel()
+
+	for _, shell := range testShells(t) {
+		shell := shell
+		t.Run(shell, func(t *testing.T) {
+			t.Parallel()
+
+			logOutput, stdout, err := runWrappedShellCommand(t, shell, `wtx switch feature/demo --help`, `#!/bin/sh
+printf '%s\n' "$*" >>"$WTX_LOG"
+if [ "${1-}" = "switch" ] && [ "${3-}" = "--help" ]; then
+  printf 'switch target help\n'
+  exit 0
+fi
+if [ "${1-}" = "path" ]; then
+  printf 'path command invoked\n'
+  exit 0
+fi
+printf 'command:%s\n' "$*"
+`)
+			if err != nil {
+				t.Fatalf("shell command failed: %v\nstdout=%q\nlog=%q", err, stdout, logOutput)
+			}
+			if strings.TrimSpace(stdout) != "switch target help" {
+				t.Fatalf("stdout = %q", stdout)
+			}
+			if strings.TrimSpace(logOutput) != "switch feature/demo --help" {
+				t.Fatalf("log = %q", logOutput)
+			}
+		})
+	}
+}
+
 func TestShellWrapperFallsThroughForSwitchWithoutTarget(t *testing.T) {
 	t.Parallel()
 

@@ -10,7 +10,7 @@ func renderShellInit(shell string) (string, error) {
 	case "zsh", "bash":
 		return `wtx() {
   if [ "${1-}" = "switch" ]; then
-    if [ "$#" -le 1 ] || [ "${2-}" = "-h" ] || [ "${2-}" = "--help" ]; then
+    if [ "$#" -le 1 ] || [ "${2-}" = "-h" ] || [ "${2-}" = "--help" ] || [ "${3-}" = "-h" ] || [ "${3-}" = "--help" ]; then
       command wtx "$@"
       return $?
     fi
