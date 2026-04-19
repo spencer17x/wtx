@@ -79,13 +79,13 @@ wtx batch-add feature/one feature/two --new-branch --root ~/worktrees --non-inte
 wtx path feature/my-branch
 ```
 
-切换到某个分支的 worktree：
+解析某个分支对应的 worktree，并输出切换过去的提示：
 
 ```bash
 wtx switch feature/my-branch
 ```
 
-在 zsh 中启用可选的 shell 集成后，`wtx switch` 可以直接让当前 shell 跳转到目标目录：
+在 zsh 中启用可选的 shell 集成后，`wtx switch` 可以直接让当前 shell 切换到目标目录：
 
 ```bash
 eval "$(wtx shell-init zsh)"
@@ -129,7 +129,7 @@ wtx path <branch>
 wtx switch <branch>
 ```
 
-输出指定分支的目标 worktree 路径。启用 shell 集成后，它会直接切换当前 shell，而不只是打印目标目录。
+未启用 shell 集成时，会输出目标 worktree 路径以及运行 `cd "$(wtx path <branch>)"` 的提示。启用 shell 集成后，它可以直接切换当前 shell。
 
 ### `shell-init`
 

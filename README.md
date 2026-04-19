@@ -79,13 +79,13 @@ Find the worktree path for a branch:
 wtx path feature/my-branch
 ```
 
-Switch to a branch worktree:
+Resolve a branch worktree and print the guidance to switch into it:
 
 ```bash
 wtx switch feature/my-branch
 ```
 
-Enable optional shell integration in zsh so `wtx switch` can jump directly in your current shell:
+Enable optional shell integration in zsh so `wtx switch` can change your current shell directly:
 
 ```bash
 eval "$(wtx shell-init zsh)"
@@ -129,7 +129,7 @@ Prints the absolute worktree path for the given branch.
 wtx switch <branch>
 ```
 
-Prints the target worktree path for the given branch. With shell integration enabled, it changes your current shell directly instead of only printing the destination.
+Without shell integration, prints the target worktree path plus guidance to run `cd "$(wtx path <branch>)"`. With shell integration enabled, it can change your current shell directly.
 
 ### `shell-init`
 
