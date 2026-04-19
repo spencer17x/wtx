@@ -28,8 +28,10 @@
 前置条件：该安装方式目前支持 macOS/Linux 的 `x64` 和 `arm64`，并且要求 Node.js 18+ 与 npm。
 
 ```bash
-npm install -g wtx
+npm install -g @spencer17x/wtx
 ```
+
+npm 包名是 `@spencer17x/wtx`，但安装后的命令仍然是 `wtx`。
 
 ### 源码构建
 

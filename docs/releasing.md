@@ -6,7 +6,7 @@
 
 ## Required External Setup
 
-- npm package ownership for `wtx`
+- npm package ownership for `@spencer17x/wtx`
 
 ## Normal Development
 
@@ -36,7 +36,7 @@ git push origin v0.1.0
 That tag triggers:
 
 - GitHub Release asset publishing
-- npm publish
+- npm publish for `@spencer17x/wtx`
 
 The workflow keeps the git tree clean while GoReleaser runs. It derives the npm package version from the tag only after the GitHub Release step, right before npm publish.
 

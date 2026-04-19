@@ -6,7 +6,7 @@
 
 ## 必需外部准备
 
-- `wtx` npm 包名的发布权限
+- `@spencer17x/wtx` npm 包名的发布权限
 
 ## 日常开发
 
@@ -36,7 +36,7 @@ git push origin v0.1.0
 该标签会触发：
 
 - GitHub Release 产物发布
-- npm 发布
+- `@spencer17x/wtx` 的 npm 发布
 
 ## 重新运行时的行为
 

@@ -28,8 +28,10 @@ Release guide: [docs/releasing.md](./docs/releasing.md)
 Requirements: supports macOS/Linux on `x64` and `arm64`, and requires Node.js 18+ with npm.
 
 ```bash
-npm install -g wtx
+npm install -g @spencer17x/wtx
 ```
+
+The npm package name is scoped as `@spencer17x/wtx`, but the installed command remains `wtx`.
 
 ### Build from source
 
