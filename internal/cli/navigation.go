@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"io"
+	"strings"
 )
 
 type resolvePathFunc func(branchName string) (string, error)
@@ -27,6 +28,14 @@ func runSwitch(stdout io.Writer, branchName string, resolve resolvePathFunc) err
 		return err
 	}
 
-	_, err = fmt.Fprintf(stdout, "shell integration not enabled; use: cd \"$(wtx path %s)\"\n", branchName)
+	_, err = fmt.Fprintf(stdout, "shell integration not enabled; use: cd \"$(wtx path %s)\"\n", shellQuote(branchName))
 	return err
+}
+
+func shellQuote(value string) string {
+	if value == "" {
+		return "''"
+	}
+
+	return "'" + strings.ReplaceAll(value, "'", `'\''`) + "'"
 }

@@ -9,7 +9,11 @@ func renderShellInit(shell string) (string, error) {
 	switch shell {
 	case "zsh", "bash":
 		return `wtx() {
-  if [ "$1" = "switch" ]; then
+  if [ "${1-}" = "switch" ]; then
+    if [ "$#" -le 1 ] || [ "${2-}" = "-h" ] || [ "${2-}" = "--help" ]; then
+      command wtx "$@"
+      return $?
+    fi
     shift
     local target
     target="$(command wtx path "$@")" || return $?

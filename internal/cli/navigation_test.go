@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -68,8 +69,27 @@ func TestRunSwitchPrintsPathAndGuidance(t *testing.T) {
 	if !strings.Contains(output, "/tmp/feature-demo") {
 		t.Fatalf("output = %q", output)
 	}
-	if !strings.Contains(output, "cd \"$(wtx path feature/demo)\"") {
+	if !strings.Contains(output, "cd \"$(wtx path 'feature/demo')\"") {
 		t.Fatalf("output = %q", output)
+	}
+}
+
+func TestRunSwitchQuotesShellSignificantBranchName(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+	branchName := `feature/demo $(touch /tmp/pwned) 'quoted'`
+	err := runSwitch(&stdout, branchName, func(branchName string) (string, error) {
+		return "/tmp/feature-demo", nil
+	})
+	if err != nil {
+		t.Fatalf("runSwitch: %v", err)
+	}
+
+	output := stdout.String()
+	wantGuidance := fmt.Sprintf("shell integration not enabled; use: cd \"$(wtx path %s)\"\n", shellQuote(branchName))
+	if !strings.Contains(output, wantGuidance) {
+		t.Fatalf("output = %q, want guidance %q", output, wantGuidance)
 	}
 }
 
