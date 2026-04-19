@@ -97,34 +97,3 @@ jobs:
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: Update Homebrew tap
-        env:
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-        run: |
-          set -euo pipefail
-          VERSION="${{ steps.version.outputs.version }}"
-          TAG="${GITHUB_REF_NAME}"
-          URL="https://github.com/spencer17x/wtx/archive/refs/tags/${TAG}.tar.gz"
-          ARCHIVE_PATH="$(mktemp)"
-          TEMP_FORMULA="$(mktemp)"
-          trap 'rm -f "$ARCHIVE_PATH" "$TEMP_FORMULA"' EXIT
-          curl -fsSL --output "$ARCHIVE_PATH" "$URL"
-          SHA256="$(shasum -a 256 "$ARCHIVE_PATH" | awk '{print $1}')"
-          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/spencer17x/homebrew-wtx.git" /tmp/homebrew-wtx
-          node scripts/update-homebrew-formula.js \
-            packaging/homebrew/wtx.rb.tmpl \
-            "$TEMP_FORMULA" \
-            "${VERSION}" \
-            "${SHA256}" \
-            "${URL}"
-          if cmp -s "$TEMP_FORMULA" /tmp/homebrew-wtx/Formula/wtx.rb; then
-            echo "Homebrew formula already current"
-            exit 0
-          fi
-          cp "$TEMP_FORMULA" /tmp/homebrew-wtx/Formula/wtx.rb
-          cd /tmp/homebrew-wtx
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Formula/wtx.rb
-          git commit -m "wtx ${VERSION}"
-          git push

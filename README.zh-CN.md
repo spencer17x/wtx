@@ -31,21 +31,6 @@
 npm install -g wtx
 ```
 
-### Homebrew
-
-以下两种 Homebrew 安装方式都受支持：
-
-```bash
-brew install spencer17x/wtx/wtx
-```
-
-或者：
-
-```bash
-brew tap spencer17x/wtx
-brew install wtx
-```
-
 ### 源码构建
 
 前置条件：本地需要安装 Go。

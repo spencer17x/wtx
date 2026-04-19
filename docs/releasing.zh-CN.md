@@ -3,12 +3,10 @@
 ## 必需 Secrets
 
 - `NPM_TOKEN`：具备 npm 发布权限
-- `HOMEBREW_TAP_TOKEN`：具备 `spencer17x/homebrew-wtx` 仓库推送权限
 
 ## 必需外部准备
 
 - `wtx` npm 包名的发布权限
-- `spencer17x/homebrew-wtx` tap 仓库
 
 ## 日常开发
 
@@ -39,11 +37,10 @@ git push origin v0.1.0
 
 - GitHub Release 产物发布
 - npm 发布
-- Homebrew tap 更新
 
 ## 重新运行时的行为
 
-重新运行时，会先检查 GitHub Release 产物是否完整，再决定是否继续 npm 发布；Homebrew 则单独对标签源码归档做校验和计算。
+重新运行时，会先检查 GitHub Release 产物是否完整，再决定是否继续 npm 发布。
 
 - 如果对应的 GitHub Release 还不存在，工作流会运行 GoReleaser 创建 Release 并上传产物。
 - 如果 Release 已存在，且包含预期的平台归档文件和 `checksums.txt`，工作流会跳过 GoReleaser，并继续后续发布步骤。

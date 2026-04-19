@@ -5,40 +5,33 @@
 Add first-class distribution for `wtx` through:
 
 - `npm install -g wtx`
-- Homebrew via a dedicated tap, so users can run `brew tap spencer17x/wtx` once and then `brew install wtx`
 - automated GitHub Releases with published binaries
-
-This design does not assume acceptance into `homebrew/core`. The project should remain compatible with a future `homebrew/core` submission, but that external review process is out of scope for the implementation.
 
 ## Current Context
 
-`wtx` is currently a Go CLI with no packaging metadata, no GitHub Actions workflows, no npm package definition, no release automation, and no Homebrew formula repository automation.
+`wtx` is a Go CLI that ships from this repository and needs packaging and release automation centered on GitHub Releases plus npm distribution.
 
-The current repository contains:
+The repository contains:
 
 - Go CLI entrypoint in `cmd/wtx/main.go`
 - internal packages under `internal/`
 - English and Chinese READMEs
-
-The repository currently has no GitHub Releases and no packaging repos or workflow files.
+- packaging and release workflow files
 
 ## Scope
 
 ### In Scope
 
-- Add an npm package named `wtx` from this repository
-- Add automated binary release artifacts for supported platforms
-- Add tag-driven GitHub Release automation
-- Add automation that updates a dedicated Homebrew tap repository
-- Document how and when releases are created
-- Document required secrets and external setup
-- Add CI checks for packaging-related behavior
+- Ship an npm package named `wtx` from this repository
+- Publish automated binary release artifacts for supported platforms
+- Run tag-driven GitHub Release automation
+- Document how releases are created and what credentials they need
+- Add CI checks for packaging behavior
 
 ### Out of Scope
 
-- Automatic submission to `homebrew/core`
 - Windows distribution
-- Package managers beyond npm and Homebrew
+- Package managers beyond npm
 - Automatic semantic version calculation from commit history
 
 ## Distribution Model
@@ -47,20 +40,7 @@ The repository currently has no GitHub Releases and no packaging repos or workfl
 
 The root repository becomes an npm package named `wtx`.
 
-The npm package is a thin installer wrapper, not a JavaScript implementation of the CLI. On installation, it determines the current OS and CPU architecture, downloads the matching prebuilt binary from the GitHub Release assets for the package version, stores it inside the package, and exposes it through the npm `bin` entry.
-
-This keeps npm users on the same binary artifacts as GitHub Releases and Homebrew users.
-
-### Homebrew
-
-Homebrew distribution uses a custom tap repository, `spencer17x/homebrew-wtx`.
-
-Users install it through either:
-
-- `brew tap spencer17x/wtx && brew install wtx`
-- `brew install spencer17x/wtx/wtx`
-
-The implementation in this repository should update the tap automatically on tagged releases by committing a new `Formula/wtx.rb` with the current version and source tarball checksum.
+The npm package is a thin installer wrapper rather than a JavaScript implementation of the CLI. On installation, it determines the current OS and CPU architecture, downloads the matching prebuilt binary from the GitHub Release assets for the package version, stores it inside the package, and exposes it through the npm `bin` entry.
 
 ### GitHub Releases
 
@@ -81,7 +61,7 @@ Initial binary targets:
 - Linux amd64
 - Linux arm64
 
-Archive naming should be deterministic and easy for both npm install scripts and Homebrew tooling to consume. A consistent convention such as the following is recommended:
+Archive naming should be deterministic and easy for the npm installer tooling to consume. A consistent convention such as the following is recommended:
 
 - `wtx_Darwin_arm64.tar.gz`
 - `wtx_Darwin_x86_64.tar.gz`
@@ -93,7 +73,7 @@ Archive naming should be deterministic and easy for both npm install scripts and
 
 ### Normal Pushes and Pull Requests
 
-Pushes to branches and pull requests run verification only. They do not publish any package, create any GitHub Release, or modify the Homebrew tap.
+Pushes to branches and pull requests run verification only. They do not publish any package or create any GitHub Release.
 
 Verification includes:
 
@@ -119,7 +99,6 @@ Pushing such a tag triggers the release workflow, which must:
 2. build release artifacts
 3. create or update the GitHub Release
 4. publish the npm package `wtx`
-5. update the Homebrew tap formula to the same version
 
 ### Prereleases
 
@@ -130,7 +109,6 @@ Prerelease tags such as `v0.1.0-rc.1` are optional future support. This design d
 ### Packaging Metadata
 
 - Add `package.json` at the repository root
-- Add a package lockfile if the npm workflow needs one
 - Add npm installer scripts under a dedicated packaging directory
 
 The npm package should include:
@@ -143,8 +121,7 @@ The npm package should include:
 ### Release Tooling
 
 - Add `.goreleaser.yaml` to define build targets, archives, checksums, and release publishing
-- Add scripts to support npm binary download/install
-- Add scripts to update the Homebrew formula from release metadata
+- Add scripts to support npm binary download and install
 
 ### GitHub Actions
 
@@ -172,7 +149,7 @@ Responsibilities:
 - run `go test ./...`
 - run a normal build of the CLI
 - verify npm package metadata is valid
-- run packaging/unit tests for the installer scripts
+- run packaging and unit tests for the npm installer scripts
 - optionally run a GoReleaser validation or snapshot build
 
 The CI workflow must not publish anything.
@@ -191,7 +168,6 @@ Responsibilities:
 - derive the release version from the pushed tag and apply it to npm package metadata
 - run GoReleaser to build archives, checksums, and GitHub Release assets
 - publish the npm package using `NPM_TOKEN`
-- update the Homebrew tap repo using a repo-scoped token
 
 ### Release Dry Run Workflow
 
@@ -203,7 +179,7 @@ Responsibilities:
 
 - run the release pipeline in snapshot or validation mode
 - produce artifacts for inspection
-- skip npm publish and tap updates
+- skip npm publish
 
 This workflow exists to validate packaging changes safely before cutting a real tag.
 
@@ -211,44 +187,21 @@ This workflow exists to validate packaging changes safely before cutting a real 
 
 ### Secrets
 
-The release workflow requires at least:
+The release workflow requires:
 
 - `NPM_TOKEN`
-- `HOMEBREW_TAP_TOKEN`
 
 `NPM_TOKEN` must have publish access to the npm package name `wtx`.
 
-`HOMEBREW_TAP_TOKEN` must have permission to push commits to `spencer17x/homebrew-wtx`.
+### External Accounts
 
-### External Repositories
-
-The following repositories/accounts must exist before the full release workflow can succeed:
+The following must exist before the full release workflow can succeed:
 
 - npm package ownership for `wtx`
-- tap repository `spencer17x/homebrew-wtx`
 
 ### GitHub Permissions
 
-The GitHub Actions workflow should use the minimum required permissions. The GitHub-provided token can create release assets if configured with `contents: write`, but a dedicated token is still required for pushing changes to a separate tap repository.
-
-## Homebrew Formula Strategy
-
-The tap formula should build from the GitHub source tarball for the tagged release version.
-
-The formula should:
-
-- declare the project metadata
-- depend on Go for building from source
-- build `./cmd/wtx`
-- include a minimal install test such as `wtx --help`
-
-The formula file should be rendered from a template or from a script that updates:
-
-- version
-- source tarball URL
-- SHA256 checksum
-
-The source tarball checksum is sufficient for a build-from-source formula in the tap.
+The GitHub Actions workflow should use the minimum required permissions. The GitHub-provided token can create release assets if configured with `contents: write`, and a dedicated npm token handles package publication.
 
 ## npm Installer Strategy
 
@@ -266,11 +219,11 @@ The installer must fail loudly and clearly if:
 
 - the expected release asset does not exist
 - the current platform is unsupported
-- the downloaded archive checksum cannot be validated, if checksum validation is implemented in the first pass
+- the downloaded archive cannot be extracted
 
 ## Failure Behavior
 
-GitHub Release artifacts are the primary output. npm and Homebrew are downstream.
+GitHub Release artifacts are the primary output. npm is downstream.
 
 Expected failure behavior:
 
@@ -278,9 +231,6 @@ Expected failure behavior:
 - If archive build fails, nothing publishes
 - If GitHub Release creation fails, nothing publishes downstream
 - If npm publish fails after assets are created, the workflow fails and can be retried after fixing npm state or credentials
-- If Homebrew tap update fails after npm succeeds, the workflow fails and requires rerun or manual repair of the tap
-
-This asymmetry is acceptable because the release assets remain available and authoritative.
 
 ## Testing Strategy
 
@@ -293,7 +243,6 @@ Existing Go tests continue to validate core CLI behavior.
 Add tests for:
 
 - platform-to-asset mapping logic in the npm installer
-- release metadata rendering logic for the Homebrew formula updater
 
 These tests should cover unsupported platforms and naming mismatches.
 
@@ -306,7 +255,7 @@ The repository should support at least one local or CI-level dry-run path for re
 
 ## File Plan
 
-Expected new files:
+Expected files:
 
 - `.github/workflows/ci.yml`
 - `.github/workflows/release.yml`
@@ -315,8 +264,6 @@ Expected new files:
 - `package.json`
 - `npm/install.js`
 - `npm/platform.js`
-- `scripts/update-homebrew-formula.js`
-- `packaging/homebrew/wtx.rb.tmpl`
 - `docs/releasing.md`
 
 Expected modified files:
@@ -327,18 +274,16 @@ Expected modified files:
 Optional test files, depending on implementation language for scripts:
 
 - `npm/platform.test.js`
-- `scripts/update-homebrew-formula.test.js`
 
 ## Recommended Implementation Sequence
 
 1. Add packaging tests and npm platform mapping logic
 2. Add npm package metadata and local install wrapper behavior
 3. Add GoReleaser configuration and snapshot validation
-4. Add Homebrew formula rendering/update logic
-5. Add CI workflow
-6. Add release workflow
-7. Add release dry-run workflow
-8. Add release documentation and README install sections
+4. Add CI workflow
+5. Add release workflow
+6. Add release dry-run workflow
+7. Add release documentation and README install sections
 
 ## Success Criteria
 
@@ -346,7 +291,5 @@ The design is successful when:
 
 - a tagged release creates GitHub Release assets automatically
 - `npm install -g wtx` installs a working `wtx` command from release binaries
-- the Homebrew tap formula updates automatically on release
-- users can run `brew tap spencer17x/wtx` and then `brew install wtx`
 - normal pushes and pull requests never publish by accident
 - release steps and required secrets are documented clearly enough to operate without guesswork

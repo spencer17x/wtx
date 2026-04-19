@@ -3,12 +3,10 @@
 ## Required Secrets
 
 - `NPM_TOKEN` with npm publish access
-- `HOMEBREW_TAP_TOKEN` with push access to `spencer17x/homebrew-wtx`
 
 ## Required External Setup
 
 - npm package ownership for `wtx`
-- tap repository `spencer17x/homebrew-wtx`
 
 ## Normal Development
 
@@ -39,11 +37,10 @@ That tag triggers:
 
 - GitHub Release asset publishing
 - npm publish
-- Homebrew tap update
 
 ## Rerun Behavior
 
-GitHub Release asset completeness gates npm publishing on reruns, while the Homebrew step separately hashes the tag source archive.
+GitHub Release asset completeness gates npm publishing on reruns.
 
 - If the release does not exist yet, the workflow runs GoReleaser to create the release and upload assets.
 - If the release already exists and contains the expected archives plus `checksums.txt`, the workflow skips GoReleaser and can continue with downstream publish steps.

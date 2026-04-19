@@ -31,21 +31,6 @@ Requirements: supports macOS/Linux on `x64` and `arm64`, and requires Node.js 18
 npm install -g wtx
 ```
 
-### Homebrew
-
-Either Homebrew install form is supported:
-
-```bash
-brew install spencer17x/wtx/wtx
-```
-
-or:
-
-```bash
-brew tap spencer17x/wtx
-brew install wtx
-```
-
 ### Build from source
 
 Requirements: Go must be installed locally.
