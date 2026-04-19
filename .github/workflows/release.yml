@@ -36,11 +36,6 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
         env:
           RELEASE_TAG: ${{ github.ref_name }}
-      - name: Derive package version
-        run: |
-          node -e "const fs=require('fs');const pkg=require('./package.json');pkg.version=process.env.VERSION;fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');"
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
       - name: Run tests
         run: npm test
       - name: Check for complete GitHub release assets
@@ -92,6 +87,12 @@ jobs:
               exit 1
             fi
           fi
+      - name: Derive package version for npm publish
+        if: steps.npm_exists.outputs.exists != 'true'
+        run: |
+          node -e "const fs=require('fs');const pkg=require('./package.json');pkg.version=process.env.VERSION;fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');"
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
       - name: Publish npm package
         if: steps.npm_exists.outputs.exists != 'true'
         run: npm publish

@@ -38,6 +38,8 @@ That tag triggers:
 - GitHub Release asset publishing
 - npm publish
 
+The workflow keeps the git tree clean while GoReleaser runs. It derives the npm package version from the tag only after the GitHub Release step, right before npm publish.
+
 ## Rerun Behavior
 
 GitHub Release asset completeness gates npm publishing on reruns.
