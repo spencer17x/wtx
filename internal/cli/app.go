@@ -40,6 +40,8 @@ func printUsage(stdout io.Writer) {
   wtx add [branch] [options]
   wtx batch-add <branch> [<branch> ...] [options]
   wtx path <branch>
+  wtx switch <branch>
+  wtx shell-init <shell>
 
 		Options:
 		  --new-branch          Create a new branch for the worktree
@@ -79,11 +81,11 @@ func parseArgv(argv []string) (parsedCLI, error) {
 	}
 
 	command := argv[0]
-	if command != "add" && command != "batch-add" && command != "path" {
+	if command != "add" && command != "batch-add" && command != "path" && command != "switch" && command != "shell-init" {
 		return parsedCLI{}, fmt.Errorf("unknown command: %s", command)
 	}
 
-	if command == "path" {
+	if command == "path" || command == "switch" || command == "shell-init" {
 		if len(argv) != 2 {
 			return parsedCLI{}, fmt.Errorf("%s requires exactly one positional argument", command)
 		}
@@ -609,6 +611,10 @@ func Run(argv []string) error {
 	interactive := shouldUsePrompts(isInteractive(), options)
 	ui := newPromptUI()
 
+	if parsed.command == "shell-init" {
+		return runShellInit(os.Stdout, parsed.target)
+	}
+
 	repoRoot, err := wtgit.ResolveRepoRoot(".")
 	if err != nil {
 		return err
@@ -624,6 +630,9 @@ func Run(argv []string) error {
 
 	if parsed.command == "path" {
 		return runPath(os.Stdout, parsed.target, resolvePath)
+	}
+	if parsed.command == "switch" {
+		return runSwitch(os.Stdout, parsed.target, resolvePath)
 	}
 
 	homeDir, err := os.UserHomeDir()

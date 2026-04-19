@@ -19,6 +19,18 @@ func TestParseArgvRecognizesPathCommand(t *testing.T) {
 	}
 }
 
+func TestParseArgvRecognizesShellInitCommand(t *testing.T) {
+	t.Parallel()
+
+	parsed, err := parseArgv([]string{"shell-init", "zsh"})
+	if err != nil {
+		t.Fatalf("parseArgv shell-init: %v", err)
+	}
+	if parsed.command != "shell-init" || parsed.target != "zsh" {
+		t.Fatalf("parsed = %#v", parsed)
+	}
+}
+
 func TestRunPathPrintsResolvedAbsolutePath(t *testing.T) {
 	t.Parallel()
 
@@ -38,6 +50,29 @@ func TestRunPathPrintsResolvedAbsolutePath(t *testing.T) {
 	}
 }
 
+func TestRunSwitchPrintsPathAndGuidance(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+	err := runSwitch(&stdout, "feature/demo", func(branchName string) (string, error) {
+		if branchName != "feature/demo" {
+			t.Fatalf("branchName = %q", branchName)
+		}
+		return "/tmp/feature-demo", nil
+	})
+	if err != nil {
+		t.Fatalf("runSwitch: %v", err)
+	}
+
+	output := stdout.String()
+	if !strings.Contains(output, "/tmp/feature-demo") {
+		t.Fatalf("output = %q", output)
+	}
+	if !strings.Contains(output, "cd \"$(wtx path feature/demo)\"") {
+		t.Fatalf("output = %q", output)
+	}
+}
+
 func TestRunPathReturnsResolverError(t *testing.T) {
 	t.Parallel()
 
@@ -47,6 +82,18 @@ func TestRunPathReturnsResolverError(t *testing.T) {
 	})
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("err = %v, want %v", err, wantErr)
+	}
+}
+
+func TestParseArgvRecognizesSwitchCommand(t *testing.T) {
+	t.Parallel()
+
+	parsed, err := parseArgv([]string{"switch", "feature/demo"})
+	if err != nil {
+		t.Fatalf("parseArgv switch: %v", err)
+	}
+	if parsed.command != "switch" || parsed.target != "feature/demo" {
+		t.Fatalf("parsed = %#v", parsed)
 	}
 }
 
