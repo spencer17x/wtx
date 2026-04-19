@@ -73,6 +73,24 @@ Create multiple worktrees in one command:
 wtx batch-add feature/one feature/two --new-branch --root ~/worktrees --non-interactive
 ```
 
+Find the worktree path for a branch:
+
+```bash
+wtx path feature/my-branch
+```
+
+Switch to a branch worktree:
+
+```bash
+wtx switch feature/my-branch
+```
+
+Enable optional shell integration in zsh so `wtx switch` can jump directly in your current shell:
+
+```bash
+eval "$(wtx shell-init zsh)"
+```
+
 ## Commands
 
 ### `add`
@@ -96,6 +114,36 @@ Notes:
 - `batch-add` is intended for non-interactive use
 - `batch-add` does not support `--name` or `--dir`
 - Use `--root` to control the parent worktree directory for batch creation
+
+### `path`
+
+```bash
+wtx path <branch>
+```
+
+Prints the absolute worktree path for the given branch.
+
+### `switch`
+
+```bash
+wtx switch <branch>
+```
+
+Prints the target worktree path for the given branch. With shell integration enabled, it changes your current shell directly instead of only printing the destination.
+
+### `shell-init`
+
+```bash
+wtx shell-init <shell>
+```
+
+Prints shell integration code for supported shells.
+
+Example for zsh:
+
+```bash
+eval "$(wtx shell-init zsh)"
+```
 
 ## Options
 

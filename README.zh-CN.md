@@ -73,6 +73,24 @@ wtx add feature/my-branch --new-branch --dry-run --non-interactive
 wtx batch-add feature/one feature/two --new-branch --root ~/worktrees --non-interactive
 ```
 
+查看某个分支对应的 worktree 路径：
+
+```bash
+wtx path feature/my-branch
+```
+
+切换到某个分支的 worktree：
+
+```bash
+wtx switch feature/my-branch
+```
+
+在 zsh 中启用可选的 shell 集成后，`wtx switch` 可以直接让当前 shell 跳转到目标目录：
+
+```bash
+eval "$(wtx shell-init zsh)"
+```
+
 ## 命令
 
 ### `add`
@@ -96,6 +114,36 @@ wtx batch-add <branch> [<branch> ...] [options]
 - `batch-add` 主要用于非交互场景
 - `batch-add` 不支持 `--name` 或 `--dir`
 - 如果要统一控制批量创建目录，请使用 `--root`
+
+### `path`
+
+```bash
+wtx path <branch>
+```
+
+输出指定分支对应的绝对 worktree 路径。
+
+### `switch`
+
+```bash
+wtx switch <branch>
+```
+
+输出指定分支的目标 worktree 路径。启用 shell 集成后，它会直接切换当前 shell，而不只是打印目标目录。
+
+### `shell-init`
+
+```bash
+wtx shell-init <shell>
+```
+
+输出受支持 shell 的集成脚本。
+
+zsh 示例：
+
+```bash
+eval "$(wtx shell-init zsh)"
+```
 
 ## 参数
 
