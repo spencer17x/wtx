@@ -1,5 +1,5 @@
 {
-  "name": "wtx",
+  "name": "@spencer17x/wtx",
   "version": "0.0.0-development",
   "description": "Enhance git worktree creation with initialization and environment setup",
   "license": "MIT",

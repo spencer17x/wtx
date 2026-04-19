@@ -95,6 +95,6 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
       - name: Publish npm package
         if: steps.npm_exists.outputs.exists != 'true'
-        run: npm publish
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
