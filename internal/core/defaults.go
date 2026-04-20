@@ -35,8 +35,7 @@ var dashPattern = regexp.MustCompile(`-+`)
 
 func SanitizeDirectoryName(value string) string {
 	sanitized := strings.TrimSpace(value)
-	sanitized = strings.ReplaceAll(sanitized, "\\", "-")
-	sanitized = strings.ReplaceAll(sanitized, "/", "-")
+	sanitized = strings.ReplaceAll(sanitized, "\\", "/")
 	sanitized = strings.Join(strings.Fields(sanitized), "-")
 	sanitized = dashPattern.ReplaceAllString(sanitized, "-")
 	sanitized = strings.Trim(sanitized, "-")

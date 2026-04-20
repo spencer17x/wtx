@@ -22,8 +22,8 @@ func TestDeriveWorktreeDefaultsUsesBranchNameAndSanitizedDirectory(t *testing.T)
 		t.Fatalf("worktree root = %q, want %q", got.WorktreeRoot, "/Users/alex/repos")
 	}
 
-	if got.Directory != "/Users/alex/repos/feature-awesome-ui" {
-		t.Fatalf("directory = %q, want %q", got.Directory, "/Users/alex/repos/feature-awesome-ui")
+	if got.Directory != "/Users/alex/repos/feature/awesome-ui" {
+		t.Fatalf("directory = %q, want %q", got.Directory, "/Users/alex/repos/feature/awesome-ui")
 	}
 }
 
@@ -55,7 +55,7 @@ func TestApplyProjectLocationEditRebuildsDirectoryWhenProjectNameChanges(t *test
 	got := core.ApplyProjectLocationEdit(core.ProjectLocation{
 		ProjectName:  "feature/awesome-ui",
 		WorktreeRoot: "/Users/alex/repos",
-		Directory:    "/Users/alex/repos/feature-awesome-ui",
+		Directory:    "/Users/alex/repos/feature/awesome-ui",
 	}, core.ProjectLocationEdit{
 		ProjectName: "release/1.0",
 		EditProject: true,
@@ -65,8 +65,8 @@ func TestApplyProjectLocationEditRebuildsDirectoryWhenProjectNameChanges(t *test
 		t.Fatalf("project name = %q, want %q", got.ProjectName, "release/1.0")
 	}
 
-	if got.Directory != "/Users/alex/repos/release-1.0" {
-		t.Fatalf("directory = %q, want %q", got.Directory, "/Users/alex/repos/release-1.0")
+	if got.Directory != "/Users/alex/repos/release/1.0" {
+		t.Fatalf("directory = %q, want %q", got.Directory, "/Users/alex/repos/release/1.0")
 	}
 }
 
@@ -76,7 +76,7 @@ func TestApplyProjectLocationEditAllowsExplicitDirectoryOverride(t *testing.T) {
 	got := core.ApplyProjectLocationEdit(core.ProjectLocation{
 		ProjectName:  "feature/awesome-ui",
 		WorktreeRoot: "/Users/alex/repos",
-		Directory:    "/Users/alex/repos/feature-awesome-ui",
+		Directory:    "/Users/alex/repos/feature/awesome-ui",
 	}, core.ProjectLocationEdit{
 		ProjectName:   "release/1.0",
 		Directory:     "/tmp/custom-dir",

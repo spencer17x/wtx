@@ -225,7 +225,7 @@ func resolveBranchMode(options parsedAddOptions, interactive bool, ui *promptUI)
 	choice, err := ui.askSelect(
 		"How should the worktree branch be created?",
 		[]string{"Use an existing branch", "Create a new branch"},
-		0,
+		1,
 	)
 	if err != nil {
 		return "", err

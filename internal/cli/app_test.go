@@ -188,8 +188,8 @@ func TestResolveBranchModeUsesSelectedInteractiveChoice(t *testing.T) {
 	if strings.Join(gotChoices, "|") != "Use an existing branch|Create a new branch" {
 		t.Fatalf("choices = %#v", gotChoices)
 	}
-	if gotDefaultIndex != 0 {
-		t.Fatalf("defaultIndex = %d, want 0", gotDefaultIndex)
+	if gotDefaultIndex != 1 {
+		t.Fatalf("defaultIndex = %d, want 1", gotDefaultIndex)
 	}
 }
 
@@ -204,7 +204,7 @@ func TestResolveProjectNameAndDirectoryPromptsSequentiallyInInteractiveMode(t *t
 			case 1:
 				return "feature/my-branch2", nil
 			case 2:
-				return "/tmp/feature-my-branch2", nil
+				return "/tmp/feature/my-branch2", nil
 			default:
 				t.Fatalf("unexpected prompt count %d", len(prompts))
 				return "", nil
@@ -227,7 +227,7 @@ func TestResolveProjectNameAndDirectoryPromptsSequentiallyInInteractiveMode(t *t
 	if projectName != "feature/my-branch2" {
 		t.Fatalf("projectName = %q", projectName)
 	}
-	if directory != "/tmp/feature-my-branch2" {
+	if directory != "/tmp/feature/my-branch2" {
 		t.Fatalf("directory = %q", directory)
 	}
 	if len(prompts) != 2 {
@@ -236,7 +236,7 @@ func TestResolveProjectNameAndDirectoryPromptsSequentiallyInInteractiveMode(t *t
 	if prompts[0] != "Project name for the new worktree|feature/my-branch2" {
 		t.Fatalf("prompts[0] = %q", prompts[0])
 	}
-	if prompts[1] != "Directory for the new worktree|/Users/alex/repos/feature-my-branch2" {
+	if prompts[1] != "Directory for the new worktree|/Users/alex/repos/feature/my-branch2" {
 		t.Fatalf("prompts[1] = %q", prompts[1])
 	}
 }
@@ -275,10 +275,10 @@ func TestResolveProjectNameAndDirectoryUsesEditedProjectNameForDerivedDirectory(
 	if projectName != "release/1.0" {
 		t.Fatalf("projectName = %q", projectName)
 	}
-	if directory != "/Users/alex/repos/release-1.0" {
+	if directory != "/Users/alex/repos/release/1.0" {
 		t.Fatalf("directory = %q", directory)
 	}
-	if prompts[1] != "Directory for the new worktree|/Users/alex/repos/release-1.0" {
+	if prompts[1] != "Directory for the new worktree|/Users/alex/repos/release/1.0" {
 		t.Fatalf("prompts[1] = %q", prompts[1])
 	}
 }
@@ -394,7 +394,7 @@ func TestResolveProjectNameAndDirectoryFallsBackToDefaultProjectNameWhenPromptEm
 	if projectName != "feature/my-branch2" {
 		t.Fatalf("projectName = %q", projectName)
 	}
-	if directory != "/Users/alex/repos/feature-my-branch2" {
+	if directory != "/Users/alex/repos/feature/my-branch2" {
 		t.Fatalf("directory = %q", directory)
 	}
 	if len(prompts) != 2 {
@@ -403,7 +403,7 @@ func TestResolveProjectNameAndDirectoryFallsBackToDefaultProjectNameWhenPromptEm
 	if prompts[0] != "Project name for the new worktree|feature/my-branch2" {
 		t.Fatalf("prompts[0] = %q", prompts[0])
 	}
-	if prompts[1] != "Directory for the new worktree|/Users/alex/repos/feature-my-branch2" {
+	if prompts[1] != "Directory for the new worktree|/Users/alex/repos/feature/my-branch2" {
 		t.Fatalf("prompts[1] = %q", prompts[1])
 	}
 }
@@ -426,7 +426,7 @@ func TestResolveProjectNameAndDirectoryDerivesDefaultsWhenNonInteractive(t *test
 	if projectName != "feature/my-branch2" {
 		t.Fatalf("projectName = %q", projectName)
 	}
-	if directory != "/Users/alex/worktrees/feature-my-branch2" {
+	if directory != "/Users/alex/worktrees/feature/my-branch2" {
 		t.Fatalf("directory = %q", directory)
 	}
 }
