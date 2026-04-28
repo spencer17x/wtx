@@ -25,6 +25,41 @@ func TestDetectSetupCommandsPrefersPNPM(t *testing.T) {
 	}
 }
 
+func TestDetectSetupCommandsOnlyUsesRootProjectFiles(t *testing.T) {
+	t.Parallel()
+
+	got := core.DetectSetupCommands([]string{"frontend/package.json", "frontend/pnpm-lock.yaml"})
+
+	if len(got) != 0 {
+		t.Fatalf("commands = %#v, want no root setup commands", got)
+	}
+}
+
+func TestDetectSetupCommandsForDirectoryScopesToProjectDirectory(t *testing.T) {
+	t.Parallel()
+
+	got := core.DetectSetupCommandsForDirectory([]string{
+		"package.json",
+		"frontend/package.json",
+		"frontend/pnpm-lock.yaml",
+		"frontend/packages/widget/package.json",
+	}, "frontend")
+
+	want := []core.SetupCommand{
+		{
+			ID:               "node-pnpm",
+			Description:      "Install Node.js dependencies with pnpm",
+			Command:          "pnpm",
+			Args:             []string{"install"},
+			WorkingDirectory: "frontend",
+		},
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("commands = %#v, want %#v", got, want)
+	}
+}
+
 func TestDetectSetupCommandsPrefersBunWhenBunLockIsPresent(t *testing.T) {
 	t.Parallel()
 
@@ -217,6 +252,46 @@ func TestApplySetupTemplatesReplacesDetectedCommandsByID(t *testing.T) {
 			Description: "Download Go module dependencies",
 			Command:     "go",
 			Args:        []string{"mod", "download"},
+		},
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("commands = %#v, want %#v", got, want)
+	}
+}
+
+func TestApplySetupTemplatesInheritsDetectedWorkingDirectory(t *testing.T) {
+	t.Parallel()
+
+	got := core.ApplySetupTemplates(
+		[]core.SetupCommand{
+			{
+				ID:               "node-pnpm",
+				Description:      "Install Node.js dependencies with pnpm",
+				Command:          "pnpm",
+				Args:             []string{"install"},
+				WorkingDirectory: "frontend",
+			},
+		},
+		map[string][]core.SetupCommand{
+			"node-pnpm": {
+				{
+					ID:          "node-pnpm-frozen",
+					Description: "Install Node.js dependencies with pnpm using the lockfile",
+					Command:     "pnpm",
+					Args:        []string{"install", "--frozen-lockfile"},
+				},
+			},
+		},
+	)
+
+	want := []core.SetupCommand{
+		{
+			ID:               "node-pnpm-frozen",
+			Description:      "Install Node.js dependencies with pnpm using the lockfile",
+			Command:          "pnpm",
+			Args:             []string{"install", "--frozen-lockfile"},
+			WorkingDirectory: "frontend",
 		},
 	}
 

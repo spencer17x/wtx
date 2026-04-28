@@ -1,7 +1,6 @@
 package core
 
 import (
-	"path"
 	"strings"
 )
 
@@ -14,25 +13,59 @@ func createSetupCommand(id string, description string, command string, args ...s
 	}
 }
 
-func normalizeFileSet(files []string) map[string]struct{} {
+func normalizeSetupDirectory(directory string) string {
+	normalized := strings.ReplaceAll(directory, "\\", "/")
+	normalized = strings.TrimPrefix(normalized, "./")
+	normalized = strings.TrimRight(normalized, "/")
+	if normalized == "." {
+		return ""
+	}
+	return normalized
+}
+
+func fileNameInSetupDirectory(file string, directory string) (string, bool) {
+	normalizedFile := strings.ReplaceAll(file, "\\", "/")
+	normalizedFile = strings.TrimPrefix(normalizedFile, "./")
+	normalizedDirectory := normalizeSetupDirectory(directory)
+
+	if normalizedDirectory == "" {
+		if normalizedFile == "" || strings.Contains(normalizedFile, "/") {
+			return "", false
+		}
+		return normalizedFile, true
+	}
+
+	prefix := normalizedDirectory + "/"
+	if !strings.HasPrefix(normalizedFile, prefix) {
+		return "", false
+	}
+
+	relativeFile := strings.TrimPrefix(normalizedFile, prefix)
+	if relativeFile == "" || strings.Contains(relativeFile, "/") {
+		return "", false
+	}
+
+	return relativeFile, true
+}
+
+func normalizeFileSetForDirectory(files []string, directory string) map[string]struct{} {
 	normalized := make(map[string]struct{}, len(files))
 	for _, file := range files {
-		normalized[strings.ReplaceAll(file, "\\", "/")] = struct{}{}
+		fileName, ok := fileNameInSetupDirectory(file, directory)
+		if !ok {
+			continue
+		}
+		normalized[fileName] = struct{}{}
 	}
 	return normalized
 }
 
 func hasFile(files map[string]struct{}, expected string) bool {
-	for file := range files {
-		if file == expected || path.Base(file) == expected {
-			return true
-		}
-	}
-	return false
+	_, ok := files[expected]
+	return ok
 }
 
-func DetectSetupCommands(files []string) []SetupCommand {
-	normalizedFiles := normalizeFileSet(files)
+func detectSetupCommands(normalizedFiles map[string]struct{}) []SetupCommand {
 	commands := []SetupCommand{}
 
 	if hasFile(normalizedFiles, "package.json") {
@@ -174,6 +207,19 @@ func DetectSetupCommands(files []string) []SetupCommand {
 	return commands
 }
 
+func DetectSetupCommands(files []string) []SetupCommand {
+	return DetectSetupCommandsForDirectory(files, "")
+}
+
+func DetectSetupCommandsForDirectory(files []string, directory string) []SetupCommand {
+	workingDirectory := normalizeSetupDirectory(directory)
+	commands := detectSetupCommands(normalizeFileSetForDirectory(files, workingDirectory))
+	for index := range commands {
+		commands[index].WorkingDirectory = workingDirectory
+	}
+	return commands
+}
+
 func ApplySetupTemplates(commands []SetupCommand, templates map[string][]SetupCommand) []SetupCommand {
 	if len(templates) == 0 {
 		return commands
@@ -182,7 +228,12 @@ func ApplySetupTemplates(commands []SetupCommand, templates map[string][]SetupCo
 	result := make([]SetupCommand, 0, len(commands))
 	for _, command := range commands {
 		if replacement, ok := templates[command.ID]; ok {
-			result = append(result, replacement...)
+			for _, replacementCommand := range replacement {
+				if replacementCommand.WorkingDirectory == "" {
+					replacementCommand.WorkingDirectory = command.WorkingDirectory
+				}
+				result = append(result, replacementCommand)
+			}
 			continue
 		}
 

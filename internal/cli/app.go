@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -200,6 +201,10 @@ func summarizePlan(plan []core.PlanEntry, setupCommands []core.SetupCommand) {
 	if len(setupCommands) > 0 {
 		fmt.Println("Setup commands:")
 		for _, command := range setupCommands {
+			if command.WorkingDirectory != "" {
+				fmt.Printf("- (cd %s && %s %s)\n", command.WorkingDirectory, command.Command, strings.Join(command.Args, " "))
+				continue
+			}
 			fmt.Printf("- %s %s\n", command.Command, strings.Join(command.Args, " "))
 		}
 	}
@@ -330,6 +335,17 @@ func resolveProjectNameAndDirectory(repoRoot string, branchName string, options 
 	return projectName, directory, nil
 }
 
+func setupWorkingDirectoryForIgnoredPath(value string) string {
+	normalized := strings.ReplaceAll(value, "\\", "/")
+	normalized = strings.TrimPrefix(normalized, "./")
+	normalized = strings.TrimRight(normalized, "/")
+	directory := path.Dir(normalized)
+	if directory == "." {
+		return ""
+	}
+	return directory
+}
+
 func resolveInitializationPlan(options parsedAddOptions, cfg config.Config, ignoredPaths []string, projectFiles []string, interactive bool, ui *promptUI) ([]core.PlanEntry, []core.SetupCommand, error) {
 	if len(ignoredPaths) == 0 {
 		return nil, nil, nil
@@ -394,10 +410,16 @@ func resolveInitializationPlan(options parsedAddOptions, cfg config.Config, igno
 	})
 
 	setupCommands := []core.SetupCommand{}
+	setupDirectories := map[string]struct{}{}
 	for _, entry := range plan {
 		if entry.Strategy == core.StrategySetup {
-			setupCommands = core.ApplySetupTemplates(core.DetectSetupCommands(projectFiles), cfg.SetupTemplates)
-			break
+			workingDirectory := setupWorkingDirectoryForIgnoredPath(entry.Path)
+			if _, ok := setupDirectories[workingDirectory]; ok {
+				continue
+			}
+			setupDirectories[workingDirectory] = struct{}{}
+			detectedCommands := core.DetectSetupCommandsForDirectory(projectFiles, workingDirectory)
+			setupCommands = append(setupCommands, core.ApplySetupTemplates(detectedCommands, cfg.SetupTemplates)...)
 		}
 	}
 

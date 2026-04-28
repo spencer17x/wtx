@@ -26,16 +26,21 @@ type Config struct {
 }
 
 type rawSetupCommand struct {
-	ID          string   `json:"id"`
-	Description string   `json:"description"`
-	Command     string   `json:"command"`
-	Args        []string `json:"args"`
+	ID               string   `json:"id"`
+	Description      string   `json:"description"`
+	Command          string   `json:"command"`
+	Args             []string `json:"args"`
+	WorkingDirectory string   `json:"cwd"`
 }
 
 func normalizePathKey(value string) string {
 	normalized := strings.ReplaceAll(value, "\\", "/")
 	normalized = strings.TrimPrefix(normalized, "./")
-	return strings.TrimRight(normalized, "/")
+	normalized = strings.TrimRight(normalized, "/")
+	if normalized == "." {
+		return ""
+	}
+	return normalized
 }
 
 func parseStrategy(value string) (core.Strategy, error) {
@@ -90,10 +95,11 @@ func parseSetupTemplate(filePath string, key string, commands []rawSetupCommand)
 		}
 
 		parsed = append(parsed, core.SetupCommand{
-			ID:          command.ID,
-			Description: command.Description,
-			Command:     command.Command,
-			Args:        command.Args,
+			ID:               command.ID,
+			Description:      command.Description,
+			Command:          command.Command,
+			Args:             command.Args,
+			WorkingDirectory: normalizePathKey(command.WorkingDirectory),
 		})
 	}
 

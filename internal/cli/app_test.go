@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -428,5 +429,56 @@ func TestResolveProjectNameAndDirectoryDerivesDefaultsWhenNonInteractive(t *test
 	}
 	if directory != "/Users/alex/worktrees/feature/my-branch2" {
 		t.Fatalf("directory = %q", directory)
+	}
+}
+
+func TestResolveInitializationPlanCreatesSetupCommandsForEachSetupDirectory(t *testing.T) {
+	t.Parallel()
+
+	plan, setupCommands, err := resolveInitializationPlan(
+		parsedAddOptions{},
+		config.Config{},
+		[]string{"frontend/node_modules/", "api/.venv/"},
+		[]string{
+			"package.json",
+			"frontend/package.json",
+			"frontend/pnpm-lock.yaml",
+			"frontend/packages/widget/package.json",
+			"api/pyproject.toml",
+			"api/uv.lock",
+		},
+		false,
+		&promptUI{},
+	)
+	if err != nil {
+		t.Fatalf("resolveInitializationPlan: %v", err)
+	}
+
+	wantPlan := []core.PlanEntry{
+		{Path: "frontend/node_modules", Strategy: core.StrategySetup},
+		{Path: "api/.venv", Strategy: core.StrategySetup},
+	}
+	if !reflect.DeepEqual(plan, wantPlan) {
+		t.Fatalf("plan = %#v, want %#v", plan, wantPlan)
+	}
+
+	wantSetupCommands := []core.SetupCommand{
+		{
+			ID:               "node-pnpm",
+			Description:      "Install Node.js dependencies with pnpm",
+			Command:          "pnpm",
+			Args:             []string{"install"},
+			WorkingDirectory: "frontend",
+		},
+		{
+			ID:               "python-uv-sync",
+			Description:      "Sync Python dependencies with uv",
+			Command:          "uv",
+			Args:             []string{"sync"},
+			WorkingDirectory: "api",
+		},
+	}
+	if !reflect.DeepEqual(setupCommands, wantSetupCommands) {
+		t.Fatalf("setupCommands = %#v, want %#v", setupCommands, wantSetupCommands)
 	}
 }

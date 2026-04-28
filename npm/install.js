@@ -1,12 +1,24 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const https = require("node:https");
+const crypto = require("node:crypto");
 const { execFileSync } = require("node:child_process");
 
 const { getAssetInfo } = require("./platform");
 
+const CHECKSUM_ASSET_NAME = "checksums.txt";
+
 function buildReleaseAssetUrl({ owner, repo, version, archive }) {
   return `https://github.com/${owner}/${repo}/releases/download/v${version}/${archive}`;
+}
+
+function buildChecksumsAssetUrl({ owner, repo, version }) {
+  return buildReleaseAssetUrl({
+    owner,
+    repo,
+    version,
+    archive: CHECKSUM_ASSET_NAME,
+  });
 }
 
 function resolveBinaryPath(packageRoot, binaryName) {
@@ -36,6 +48,7 @@ function downloadFile(
     createWriteStreamImpl = fs.createWriteStream,
     rmImpl = fs.rm,
     redirectCount = 0,
+    timeoutMs = 30000,
   } = {},
 ) {
   return new Promise((resolve, reject) => {
@@ -63,6 +76,13 @@ function downloadFile(
     };
 
     const request = getImpl(url, (response) => {
+      if (settled) {
+        if (response && typeof response.resume === "function") {
+          response.resume();
+        }
+        return;
+      }
+
       const isRedirect = response.statusCode >= 300 && response.statusCode < 400;
       if (isRedirect && response.headers.location) {
         settled = true;
@@ -81,6 +101,7 @@ function downloadFile(
               createWriteStreamImpl,
               rmImpl,
               redirectCount: redirectCount + 1,
+              timeoutMs,
             },
           );
         })().then(resolve, reject);
@@ -108,6 +129,15 @@ function downloadFile(
     if (request && typeof request.on === "function") {
       request.on("error", fail);
     }
+    if (request && typeof request.setTimeout === "function") {
+      request.setTimeout(timeoutMs, () => {
+        const error = new Error(`Timed out downloading ${url}`);
+        fail(error);
+        if (typeof request.destroy === "function") {
+          request.destroy(error);
+        }
+      });
+    }
   });
 }
 
@@ -127,6 +157,38 @@ function extractArchive(archivePath, outputDir, { execFileSyncImpl = execFileSyn
   }
 }
 
+function findArchiveChecksum(checksums, archiveName) {
+  for (const line of checksums.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (trimmed === "") {
+      continue;
+    }
+
+    const [hash, fileName] = trimmed.split(/\s+/);
+    if (fileName === archiveName) {
+      return hash;
+    }
+  }
+
+  return "";
+}
+
+function sha256File(filePath) {
+  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+}
+
+function verifyArchiveChecksum(archivePath, checksumsPath, archiveName) {
+  const expectedHash = findArchiveChecksum(fs.readFileSync(checksumsPath, "utf8"), archiveName);
+  if (!expectedHash) {
+    throw new Error(`Missing checksum for ${archiveName}`);
+  }
+
+  const actualHash = sha256File(archivePath);
+  if (actualHash !== expectedHash) {
+    throw new Error(`Checksum mismatch for ${archiveName}`);
+  }
+}
+
 async function installBinary({
   packageRoot = path.resolve(__dirname, ".."),
   version,
@@ -143,6 +205,7 @@ async function installBinary({
 
   const asset = getAssetInfo(platform, arch);
   const archivePath = path.join(packageRoot, asset.archive);
+  const checksumsPath = path.join(packageRoot, CHECKSUM_ASSET_NAME);
   const binaryPath = resolveBinaryPath(packageRoot, asset.binaryName);
 
   fs.mkdirSync(path.dirname(binaryPath), { recursive: true });
@@ -156,6 +219,8 @@ async function installBinary({
 
   try {
     await downloadFileImpl(url, archivePath);
+    await downloadFileImpl(buildChecksumsAssetUrl({ owner, repo, version }), checksumsPath);
+    verifyArchiveChecksum(archivePath, checksumsPath, asset.archive);
     extractArchive(archivePath, path.dirname(binaryPath), { execFileSyncImpl });
     fs.chmodSync(binaryPath, 0o755);
   } catch (error) {
@@ -163,6 +228,7 @@ async function installBinary({
     throw error;
   } finally {
     fs.rmSync(archivePath, { force: true });
+    fs.rmSync(checksumsPath, { force: true });
   }
 
   return { skipped: false };
@@ -170,12 +236,14 @@ async function installBinary({
 
 module.exports = {
   buildReleaseAssetUrl,
+  buildChecksumsAssetUrl,
   downloadFile,
   resolveBinaryPath,
   shouldSkipInstall,
   installBinary,
   extractArchive,
   formatExtractionError,
+  verifyArchiveChecksum,
 };
 
 if (require.main === module) {

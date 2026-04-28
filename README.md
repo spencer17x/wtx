@@ -192,7 +192,7 @@ eval "$(wtx shell-init zsh)"
 
 ## Automatic Setup Detection
 
-`wtx` detects common ecosystems and chooses setup commands automatically.
+`wtx` detects common ecosystems and chooses setup commands automatically. When an ignored setup path is inside a subdirectory, such as `frontend/node_modules`, setup detection and commands run in that same project directory.
 
 Examples:
 
@@ -288,6 +288,18 @@ Example:
 
 - Replace detected `node-pnpm` with `pnpm install --frozen-lockfile`
 - Replace detected `python-uv-sync` with a custom `uv` invocation
+
+Template commands inherit the detected setup directory by default. Set `cwd` when a template should run somewhere else inside the new worktree.
+
+```json
+{
+  "id": "node-pnpm-custom",
+  "description": "Install frontend dependencies",
+  "command": "pnpm",
+  "cwd": "frontend",
+  "args": ["install", "--frozen-lockfile"]
+}
+```
 
 ### `hooks`
 

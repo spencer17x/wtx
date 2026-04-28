@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const crypto = require("node:crypto");
 const { PassThrough, Readable, Writable } = require("node:stream");
 
 const {
@@ -12,6 +13,19 @@ const {
   installBinary,
   shouldSkipInstall,
 } = require("./install");
+
+function writeArchiveOrChecksum(url, destination, archiveName, archivePayload) {
+  if (url.endsWith("/checksums.txt")) {
+    const archiveHash = crypto
+      .createHash("sha256")
+      .update(archivePayload)
+      .digest("hex");
+    fs.writeFileSync(destination, `${archiveHash}  ${archiveName}\n`);
+    return;
+  }
+
+  fs.writeFileSync(destination, archivePayload);
+}
 
 test("builds the expected GitHub release asset URL", () => {
   assert.equal(
@@ -30,6 +44,44 @@ test("resolves the local binary path inside the npm package", () => {
     resolveBinaryPath("/tmp/pkg", "wtx"),
     /\/tmp\/pkg\/npm\/bin\/wtx$/,
   );
+});
+
+test("times out stalled downloads and destroys the request", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wtx-install-"));
+  const destination = path.join(tempDir, "asset.tgz");
+  let destroyed = false;
+
+  await assert.rejects(
+    downloadFile("https://example.com/archive.tgz", destination, {
+      timeoutMs: 1,
+      getImpl: (_url, callback) => {
+        const response = Readable.from(["payload"]);
+        response.statusCode = 200;
+        response.headers = {};
+        process.nextTick(() => callback(response));
+        return {
+          on() {},
+          setTimeout(ms, onTimeout) {
+            assert.equal(ms, 1);
+            onTimeout();
+          },
+          destroy(error) {
+            destroyed = true;
+            assert.match(error.message, /Timed out downloading/);
+          },
+        };
+      },
+      createWriteStreamImpl: () => {
+        const file = new PassThrough();
+        file.close = (cb) => process.nextTick(cb);
+        return file;
+      },
+      rmImpl: (_target, _options, cb) => process.nextTick(cb),
+    }),
+    /Timed out downloading/,
+  );
+
+  assert.equal(destroyed, true);
 });
 
 test("follows redirects when downloading release assets", async () => {
@@ -177,9 +229,45 @@ test("skips installing in development checkouts", async () => {
   assert.equal(shouldSkipInstall("0.0.0-development"), true);
 });
 
-test("surfaces a clear error when tar is unavailable", async () => {
+test("verifies downloaded release archives against checksums", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wtx-install-"));
-  const archivePath = path.join(tempDir, "wtx_Darwin_arm64.tar.gz");
+  const binaryPath = path.join(tempDir, "npm", "bin", "wtx");
+  const archiveName = "wtx_Darwin_arm64.tar.gz";
+  const archivePayload = "archive";
+  const archiveHash = crypto
+    .createHash("sha256")
+    .update(archivePayload)
+    .digest("hex");
+  const downloaded = [];
+
+  const result = await installBinary({
+    packageRoot: tempDir,
+    version: "0.1.0",
+    platform: "darwin",
+    arch: "arm64",
+    downloadFileImpl: async (url, destination) => {
+      downloaded.push(path.basename(url));
+      if (url.endsWith("/checksums.txt")) {
+        fs.writeFileSync(destination, `${archiveHash}  ${archiveName}\n`);
+        return;
+      }
+      fs.writeFileSync(destination, archivePayload);
+    },
+    execFileSyncImpl: () => {
+      fs.mkdirSync(path.dirname(binaryPath), { recursive: true });
+      fs.writeFileSync(binaryPath, "binary");
+    },
+  });
+
+  assert.equal(result.skipped, false);
+  assert.deepEqual(downloaded, [archiveName, "checksums.txt"]);
+  assert.equal(fs.existsSync(binaryPath), true);
+});
+
+test("rejects release archives with mismatched checksums", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wtx-install-"));
+  const archiveName = "wtx_Darwin_arm64.tar.gz";
+  let extracted = false;
 
   await assert.rejects(
     installBinary({
@@ -187,8 +275,36 @@ test("surfaces a clear error when tar is unavailable", async () => {
       version: "0.1.0",
       platform: "darwin",
       arch: "arm64",
-      downloadFileImpl: async (_url, destination) => {
+      downloadFileImpl: async (url, destination) => {
+        if (url.endsWith("/checksums.txt")) {
+          fs.writeFileSync(destination, `${"0".repeat(64)}  ${archiveName}\n`);
+          return;
+        }
         fs.writeFileSync(destination, "archive");
+      },
+      execFileSyncImpl: () => {
+        extracted = true;
+      },
+    }),
+    /Checksum mismatch/,
+  );
+
+  assert.equal(extracted, false);
+});
+
+test("surfaces a clear error when tar is unavailable", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wtx-install-"));
+  const archivePath = path.join(tempDir, "wtx_Darwin_arm64.tar.gz");
+  const archivePayload = "archive";
+
+  await assert.rejects(
+    installBinary({
+      packageRoot: tempDir,
+      version: "0.1.0",
+      platform: "darwin",
+      arch: "arm64",
+      downloadFileImpl: async (url, destination) => {
+        writeArchiveOrChecksum(url, destination, "wtx_Darwin_arm64.tar.gz", archivePayload);
       },
       execFileSyncImpl: () => {
         const error = new Error("spawn tar ENOENT");
@@ -204,6 +320,7 @@ test("surfaces a clear error when tar is unavailable", async () => {
 
 test("surfaces a clear error when tar extraction fails", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wtx-install-"));
+  const archivePayload = "archive";
 
   await assert.rejects(
     installBinary({
@@ -211,8 +328,8 @@ test("surfaces a clear error when tar extraction fails", async () => {
       version: "0.1.0",
       platform: "darwin",
       arch: "arm64",
-      downloadFileImpl: async (_url, destination) => {
-        fs.writeFileSync(destination, "archive");
+      downloadFileImpl: async (url, destination) => {
+        writeArchiveOrChecksum(url, destination, "wtx_Darwin_arm64.tar.gz", archivePayload);
       },
       execFileSyncImpl: () => {
         throw new Error("tar exited 2");
@@ -225,6 +342,7 @@ test("surfaces a clear error when tar extraction fails", async () => {
 test("removes the binary when extraction fails after writing it", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wtx-install-"));
   const binaryPath = path.join(tempDir, "npm", "bin", "wtx");
+  const archivePayload = "archive";
 
   await assert.rejects(
     installBinary({
@@ -232,9 +350,9 @@ test("removes the binary when extraction fails after writing it", async () => {
       version: "0.1.0",
       platform: "darwin",
       arch: "arm64",
-      downloadFileImpl: async (_url, destination) => {
+      downloadFileImpl: async (url, destination) => {
         fs.mkdirSync(path.dirname(destination), { recursive: true });
-        fs.writeFileSync(destination, "archive");
+        writeArchiveOrChecksum(url, destination, "wtx_Darwin_arm64.tar.gz", archivePayload);
       },
       execFileSyncImpl: () => {
         fs.mkdirSync(path.dirname(binaryPath), { recursive: true });

@@ -192,7 +192,7 @@ eval "$(wtx shell-init zsh)"
 
 ## 自动 Setup 检测
 
-`wtx` 会识别常见生态并自动选择初始化命令。
+`wtx` 会识别常见生态并自动选择初始化命令。如果 ignored setup 路径位于子目录中，例如 `frontend/node_modules`，setup 检测和命令会在同一个项目子目录中执行。
 
 示例：
 
@@ -288,6 +288,18 @@ eval "$(wtx shell-init zsh)"
 
 - 将自动检测出的 `node-pnpm` 替换成 `pnpm install --frozen-lockfile`
 - 将自动检测出的 `python-uv-sync` 替换成自定义 `uv` 命令
+
+模板命令默认继承自动检测到的 setup 目录。需要在新 worktree 的其他目录运行时，可以设置 `cwd`。
+
+```json
+{
+  "id": "node-pnpm-custom",
+  "description": "Install frontend dependencies",
+  "command": "pnpm",
+  "cwd": "frontend",
+  "args": ["install", "--frozen-lockfile"]
+}
+```
 
 ### `hooks`
 

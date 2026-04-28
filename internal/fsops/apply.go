@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/spencer17x/wtx/internal/core"
 )
@@ -137,6 +138,22 @@ func runCommand(cwd string, command string, args ...string) error {
 	return nil
 }
 
+func resolveSetupCommandDirectory(worktreeDirectory string, workingDirectory string) (string, error) {
+	if workingDirectory == "" {
+		return worktreeDirectory, nil
+	}
+
+	relativeDirectory := filepath.Clean(filepath.FromSlash(workingDirectory))
+	if filepath.IsAbs(relativeDirectory) || relativeDirectory == ".." || strings.HasPrefix(relativeDirectory, ".."+string(os.PathSeparator)) {
+		return "", fmt.Errorf("setup working directory must stay inside the worktree: %s", workingDirectory)
+	}
+	if relativeDirectory == "." {
+		return worktreeDirectory, nil
+	}
+
+	return filepath.Join(worktreeDirectory, relativeDirectory), nil
+}
+
 func ApplyInitializationPlan(input ApplyInitializationPlanInput) error {
 	for _, entry := range input.Plan {
 		sourcePath := filepath.Join(input.SourceRoot, filepath.FromSlash(entry.Path))
@@ -156,7 +173,11 @@ func ApplyInitializationPlan(input ApplyInitializationPlanInput) error {
 
 	for _, setupCommand := range input.SetupCommands {
 		fmt.Printf("Running setup: %s\n", setupCommand.Description)
-		if err := runCommand(input.WorktreeDirectory, setupCommand.Command, setupCommand.Args...); err != nil {
+		setupDirectory, err := resolveSetupCommandDirectory(input.WorktreeDirectory, setupCommand.WorkingDirectory)
+		if err != nil {
+			return err
+		}
+		if err := runCommand(setupDirectory, setupCommand.Command, setupCommand.Args...); err != nil {
 			return err
 		}
 	}

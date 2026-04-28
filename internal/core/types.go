@@ -35,10 +35,11 @@ type PlanEntry struct {
 }
 
 type SetupCommand struct {
-	ID          string
-	Description string
-	Command     string
-	Args        []string
+	ID               string
+	Description      string
+	Command          string
+	Args             []string
+	WorkingDirectory string
 }
 
 type CommandHook struct {
