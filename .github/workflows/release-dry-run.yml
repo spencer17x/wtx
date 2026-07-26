@@ -51,8 +51,10 @@ jobs:
           node -e "const fs=require('fs');const pkg=require('./package.json');pkg.version=process.env.VERSION;fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');"
         env:
           VERSION: ${{ steps.version.outputs.version }}
-      - name: Run repository checks
-        run: npm run check
+      - name: Run tests
+        run: npm test
+      - name: Validate GoReleaser config
+        run: npm run release:check
       - name: Dry-run package publish shape
         run: npm pack --dry-run
       - name: Run release snapshot

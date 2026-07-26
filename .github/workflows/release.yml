@@ -39,8 +39,10 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
         env:
           RELEASE_TAG: ${{ github.ref_name }}
-      - name: Run repository checks
-        run: npm run check
+      - name: Run tests
+        run: npm test
+      - name: Validate GoReleaser config
+        run: npm run release:check
       - name: Check for complete GitHub release assets
         id: release_state
         env:

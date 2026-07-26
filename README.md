@@ -44,10 +44,10 @@ go build -o bin/wtx ./cmd/wtx
 
 This produces `./bin/wtx` if you want to run the locally built binary directly.
 
-Run the full repository check:
+Run the tests:
 
 ```bash
-npm run check
+npm test
 ```
 
 ## Quick Start

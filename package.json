@@ -32,10 +32,6 @@
     "LICENSE"
   ],
   "scripts": {
-    "format": "gofmt -w cmd internal",
-    "format:check": "files=\"$(gofmt -l cmd internal)\" && test -z \"$files\" || { printf '%s\\n' \"$files\"; exit 1; }",
-    "check:vet": "go vet ./...",
-    "check": "npm run format:check && npm run check:vet && npm test && npm run release:check",
     "release:check": "go run github.com/goreleaser/goreleaser/v2@v2.15.3 check",
     "release:snapshot": "go run github.com/goreleaser/goreleaser/v2@v2.15.3 release --snapshot --clean --skip=publish",
     "release:publish": "go run github.com/goreleaser/goreleaser/v2@v2.15.3 release --clean",

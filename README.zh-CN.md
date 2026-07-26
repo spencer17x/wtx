@@ -44,10 +44,10 @@ go build -o bin/wtx ./cmd/wtx
 
 如果你想直接运行本地构建的二进制，构建结果会输出到 `./bin/wtx`。
 
-运行完整仓库检查：
+运行测试：
 
 ```bash
-npm run check
+npm test
 ```
 
 ## 快速开始

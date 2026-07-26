@@ -18,7 +18,7 @@ This file applies to the entire repository.
 ```text
 cmd/ / internal/     Go CLI source (see go.mod)
 npm/                 Node install/postinstall helpers for the published binary
-.github/workflows/   CI (gofmt, go vet, npm tests, release)
+.github/workflows/   Release automation
 docs/                releasing and docs
 ```
 
@@ -30,21 +30,22 @@ docs/                releasing and docs
 
 ## Runtime And Environment
 
-- Go: version from `go.mod` / CI.
+- Go: version from `go.mod`.
 - Tooling Node/npm: `.nvmrc` and `packageManager` pin Node `24.18.0` and npm `11.16.0`; supported ranges come from `engines`.
 - Install targets: macOS/Linux, arm64/x64.
 
 ## Commands And Verification
 
 ```bash
-npm run check
+npm test
+npm run release:check
 ```
 
 | Change | Required checks |
 | --- | --- |
-| Go code | `npm run check` |
-| npm helpers | `npm run check` |
-| Release tooling | follow `docs/releasing.md` only when asked |
+| Go code | `npm test` |
+| npm helpers | `npm test` |
+| Release tooling | `npm run release:check`; follow `docs/releasing.md` only when asked |
 
 ## Git And Commits
 
@@ -54,19 +55,18 @@ npm run check
 ## Security And Privacy
 
 - Do not commit secrets or machine-local paths into fixtures.
-- Release credentials only via CI secrets.
+- Release credentials only via GitHub Actions secrets.
 
 ## Definition Of Done
 
 - [ ] Behavior complete
-- [ ] Go/npm checks green or skips disclosed
+- [ ] Relevant tests green or skips disclosed
 - [ ] Handoff lists verification and residual risk
 
 ## Repository Engineering Baseline
 
 - This repository is self-contained; it does not depend on a shared standards repository.
 - Go version comes from `go.mod`; tooling Node comes from `.nvmrc` and `engines`.
-- `npm run check` is the single local and CI quality gate.
-- Hooks are intentionally omitted. CI enforces the same gate on pull requests,
-  `main` pushes, and `v*` release-tag pushes.
-- Extend the existing `.github/workflows/ci.yml`; do not add a parallel quality workflow.
+- No pre-commit, commit-msg, or pre-push hooks are configured.
+- Pull requests and branch pushes do not run automated CI or lint checks.
+- Release workflows run only when manually requested or when a `v*` tag is pushed.

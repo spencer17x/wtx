@@ -10,10 +10,8 @@
 
 ## 日常开发
 
-Pull Request 与 `main` push 只运行 CI，不会发布任何产物；功能分支 push
-由对应 Pull Request 验证，避免重复运行。`v*` 标签 push 会同时运行 CI 并触发
-正式发布流程。正式发布会在发布前重新执行完整仓库检查，因此发布安全不依赖
-并行 CI 任务先完成。
+Pull Request 和分支 push 不会触发自动 CI。`v*` 标签 push 会触发正式发布
+流程；发布前会重新运行测试并校验 GoReleaser 配置。
 
 ## 发布前 Dry Run
 
@@ -22,11 +20,11 @@ Pull Request 与 `main` push 只运行 CI，不会发布任何产物；功能分
 - `ref`：要检出的分支名、已有标签或 commit SHA
 - `version`：候选版本号，格式必须是 `vX.Y.Z`
 
-Dry run 会校验版本号格式、运行 `npm run check`、检查 `npm pack --dry-run`，并执行 `npm run release:snapshot`。整个过程不会发布任何内容。
+Dry run 会校验版本号格式、运行 `npm test` 和 `npm run release:check`、检查 `npm pack --dry-run`，并执行 `npm run release:snapshot`。整个过程不会发布任何内容。
 
 ## 正式发布
 
-1. 运行 `npm run check`，并确认 `main` 为绿色状态。
+1. 运行 `npm test` 和 `npm run release:check`。
 2. 如有需要，先对计划发布的 `ref` 和候选版本运行一次 `Release Dry Run`。
 3. 在待发布提交上创建 `vX.Y.Z` 形式的标签。
 4. 推送该标签。
