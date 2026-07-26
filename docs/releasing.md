@@ -10,7 +10,11 @@
 
 ## Normal Development
 
-Non-tag branch pushes and pull requests run CI only. Tag pushes still run CI, and they also trigger the release workflow. The release workflow reruns the full repository check before it publishes, so release safety does not depend on the parallel CI run finishing first.
+Pull requests and `main` pushes run CI only. `v*` tag pushes still run CI, and
+they also trigger the release workflow. Feature-branch pushes are validated by
+their pull request instead of starting a duplicate CI run. The release workflow
+reruns the full repository check before it publishes, so release safety does not
+depend on the parallel CI run finishing first.
 
 ## Release Dry Run
 

@@ -67,5 +67,6 @@ npm run check
 - This repository is self-contained; it does not depend on a shared standards repository.
 - Go version comes from `go.mod`; tooling Node comes from `.nvmrc` and `engines`.
 - `npm run check` is the single local and CI quality gate.
-- Hooks are intentionally omitted. CI enforces the same gate on every push and pull request.
+- Hooks are intentionally omitted. CI enforces the same gate on pull requests,
+  `main` pushes, and `v*` release-tag pushes.
 - Extend the existing `.github/workflows/ci.yml`; do not add a parallel quality workflow.
