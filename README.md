@@ -25,7 +25,8 @@ Release guide: [docs/releasing.md](./docs/releasing.md)
 
 ### npm
 
-Requirements: supports macOS/Linux on `x64` and `arm64`, and requires Node.js 18+ with npm.
+Requirements: supports macOS/Linux on `x64` and `arm64`, and requires Node.js `24.18.0`
+with npm `11.16.0`.
 
 ```bash
 npm install -g @spencer17x/wtx
@@ -43,10 +44,10 @@ go build -o bin/wtx ./cmd/wtx
 
 This produces `./bin/wtx` if you want to run the locally built binary directly.
 
-Run tests:
+Run the full repository check:
 
 ```bash
-go test ./...
+npm run check
 ```
 
 ## Quick Start
@@ -347,15 +348,15 @@ wtx batch-add review/a review/b review/c --new-branch --root ~/worktrees --non-i
 
 ## Project Structure
 
-- [cmd/wtx/main.go](/Users/17admin/projects/wtx/cmd/wtx/main.go:1)
+- [`cmd/wtx/main.go`](cmd/wtx/main.go)
   CLI entrypoint
-- [internal/cli/app.go](/Users/17admin/projects/wtx/internal/cli/app.go:1)
+- [`internal/cli/app.go`](internal/cli/app.go)
   argument parsing, prompts, execution flow
-- [internal/core](/Users/17admin/projects/wtx/internal/core)
+- [`internal/core`](internal/core)
   defaults, planning, setup detection, types
-- [internal/config/config.go](/Users/17admin/projects/wtx/internal/config/config.go:1)
+- [`internal/config/config.go`](internal/config/config.go)
   config loading and merge logic
-- [internal/git](/Users/17admin/projects/wtx/internal/git)
+- [`internal/git`](internal/git)
   Git command construction and repository inspection
-- [internal/fsops/apply.go](/Users/17admin/projects/wtx/internal/fsops/apply.go:1)
+- [`internal/fsops/apply.go`](internal/fsops/apply.go)
   copy, symlink, and setup execution

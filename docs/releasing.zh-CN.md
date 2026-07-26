@@ -10,7 +10,7 @@
 
 ## 日常开发
 
-普通分支 push 和 pull request 只运行 CI，不会发布任何产物。只有 `v*` 标签 push 才会触发正式发布流程。
+普通分支 push 和 pull request 只运行 CI，不会发布任何产物。只有 `v*` 标签 push 才会触发正式发布流程。正式发布会在发布前重新执行完整仓库检查，因此发布安全不依赖并行 CI 任务先完成。
 
 ## 发布前 Dry Run
 
@@ -19,11 +19,11 @@
 - `ref`：要检出的分支名、已有标签或 commit SHA
 - `version`：候选版本号，格式必须是 `vX.Y.Z`
 
-Dry run 会校验版本号格式、运行 `npm test`、运行 `npm run release:check`、检查 `npm pack --dry-run`，并执行 `npm run release:snapshot`。整个过程不会发布任何内容。
+Dry run 会校验版本号格式、运行 `npm run check`、检查 `npm pack --dry-run`，并执行 `npm run release:snapshot`。整个过程不会发布任何内容。
 
 ## 正式发布
 
-1. 确认 `main` 为绿色状态。
+1. 运行 `npm run check`，并确认 `main` 为绿色状态。
 2. 如有需要，先对计划发布的 `ref` 和候选版本运行一次 `Release Dry Run`。
 3. 在待发布提交上创建 `vX.Y.Z` 形式的标签。
 4. 推送该标签。
@@ -37,6 +37,8 @@ git push origin v0.1.0
 
 - GitHub Release 产物发布
 - `@spencer17x/wtx` 的 npm 发布
+
+工作流会在 GoReleaser 运行期间保持 git 工作区干净；只有 GitHub Release 步骤完成后，才会从标签派生 npm 包版本并执行 npm 发布。
 
 ## 重新运行时的行为
 
