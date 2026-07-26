@@ -12,23 +12,33 @@ on:
         required: true
         default: v0.0.0
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   dry-run:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
           ref: ${{ inputs.ref }}
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "20"
+          node-version-file: .nvmrc
+          package-manager-cache: false
       - name: Validate candidate version and derive package version
         id: version
         run: |
@@ -41,10 +51,8 @@ jobs:
           node -e "const fs=require('fs');const pkg=require('./package.json');pkg.version=process.env.VERSION;fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');"
         env:
           VERSION: ${{ steps.version.outputs.version }}
-      - name: Run tests
-        run: npm test
-      - name: Validate GoReleaser config
-        run: npm run release:check
+      - name: Run repository checks
+        run: npm run check
       - name: Dry-run package publish shape
         run: npm pack --dry-run
       - name: Run release snapshot

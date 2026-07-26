@@ -25,7 +25,8 @@
 
 ### npm
 
-前置条件：该安装方式目前支持 macOS/Linux 的 `x64` 和 `arm64`，并且要求 Node.js 18+ 与 npm。
+前置条件：该安装方式目前支持 macOS/Linux 的 `x64` 和 `arm64`，并且要求 Node.js
+`24.18.0` 与 npm `11.16.0`。
 
 ```bash
 npm install -g @spencer17x/wtx
@@ -43,10 +44,10 @@ go build -o bin/wtx ./cmd/wtx
 
 如果你想直接运行本地构建的二进制，构建结果会输出到 `./bin/wtx`。
 
-运行测试：
+运行完整仓库检查：
 
 ```bash
-go test ./...
+npm run check
 ```
 
 ## 快速开始
@@ -347,15 +348,15 @@ wtx batch-add review/a review/b review/c --new-branch --root ~/worktrees --non-i
 
 ## 项目结构
 
-- [cmd/wtx/main.go](/Users/17admin/projects/wtx/cmd/wtx/main.go:1)
+- [`cmd/wtx/main.go`](cmd/wtx/main.go)
   CLI 入口
-- [internal/cli/app.go](/Users/17admin/projects/wtx/internal/cli/app.go:1)
+- [`internal/cli/app.go`](internal/cli/app.go)
   参数解析、交互流程、执行编排
-- [internal/core](/Users/17admin/projects/wtx/internal/core)
+- [`internal/core`](internal/core)
   默认值、策略规划、setup 检测、核心类型
-- [internal/config/config.go](/Users/17admin/projects/wtx/internal/config/config.go:1)
+- [`internal/config/config.go`](internal/config/config.go)
   配置加载和合并逻辑
-- [internal/git](/Users/17admin/projects/wtx/internal/git)
+- [`internal/git`](internal/git)
   Git 命令构造与仓库信息读取
-- [internal/fsops/apply.go](/Users/17admin/projects/wtx/internal/fsops/apply.go:1)
+- [`internal/fsops/apply.go`](internal/fsops/apply.go)
   copy、symlink 和 setup 执行
